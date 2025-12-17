@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import GradeSelection from './pages/GradeSelection';
 import Topics from './pages/Topics';
 import Lessons from './pages/Lessons';
 import LessonDetail from './pages/LessonDetail';
@@ -41,12 +42,24 @@ function App() {
             element={<Register />}
           />
           
+          {/* Grade Selection - Protected */}
+          <Route
+            path="/select-grade"
+            element={
+              <ProtectedRoute>
+                <GradeSelection />
+              </ProtectedRoute>
+            }
+          />
+          
           {/* Home route - redirect based on auth */}
           <Route
             path="/"
             element={
               <Layout>
-                <Home />
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
               </Layout>
             }
           />

@@ -35,11 +35,11 @@ const Login = () => {
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
-      // Redirect admin to admin panel, others to home
+      // Redirect admin to admin panel, others to grade selection
       if (result.data?.role === 'admin') {
         navigate('/admin');
       } else {
-        navigate('/');
+        navigate('/select-grade');
       }
     } else {
       setError(result.message || 'Đăng nhập thất bại');
@@ -49,11 +49,11 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-page bg-home flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h2 className="text-4xl font-bold text-primary-700 mb-2">
-            🎓 Học Toán Lớp 5
+            🎓 MathVui
           </h2>
           <h3 className="text-2xl font-semibold text-gray-800">
             Đăng nhập

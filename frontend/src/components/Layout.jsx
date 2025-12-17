@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Layout = ({ children }) => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, selectedGrade } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -41,17 +41,19 @@ const Layout = ({ children }) => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
+  const isHome = location.pathname === '/';
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-page bg-home">
       {/* Header */}
-      <header className="bg-white shadow-md">
+      <header className="bg-white/85 backdrop-blur-sm shadow-md relative z-[100]">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
               <span className="text-3xl">🎓</span>
               <span className="text-2xl font-bold text-primary-700">
-                Học Toán Lớp 5
+                MathVui
               </span>
             </Link>
 
@@ -77,6 +79,18 @@ const Layout = ({ children }) => {
               >
                 Tiến độ
               </Link>
+              {isAuthenticated && user?.role !== 'admin' && (
+                <Link
+                  to="/select-grade"
+                  className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                    isActive('/select-grade')
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Chọn lớp
+                </Link>
+              )}
             </nav>
 
             {/* User Menu */}
@@ -113,7 +127,7 @@ const Layout = ({ children }) => {
                     </button>
                     {/* Dropdown Menu */}
                     <div
-                      className={`absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 transition-all z-50 ${
+                      className={`absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 transition-all z-[9999] ${
                         isMenuOpen
                           ? 'opacity-100 visible'
                           : 'opacity-0 invisible md:group-hover:opacity-100 md:group-hover:visible'
@@ -200,6 +214,18 @@ const Layout = ({ children }) => {
             >
               Tiến độ
             </Link>
+            {isAuthenticated && user?.role !== 'admin' && (
+              <Link
+                to="/select-grade"
+                className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                  isActive('/select-grade')
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'text-gray-700'
+                }`}
+              >
+                Chọn lớp
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -211,9 +237,7 @@ const Layout = ({ children }) => {
       <footer className="bg-gray-800 text-white mt-12">
         <div className="container mx-auto px-4 py-6">
           <div className="text-center">
-            <p className="text-gray-400">
-              © 2024 Học Toán Lớp 5. Tất cả quyền được bảo lưu.
-            </p>
+            <p className="text-gray-400">Design by group 32</p>
           </div>
         </div>
       </footer>

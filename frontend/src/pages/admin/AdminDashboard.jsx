@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import api from '../../utils/api';
 
 const AdminDashboard = () => {
@@ -20,14 +21,33 @@ const AdminDashboard = () => {
         api.get('/users/stats')
       ]);
 
+      const topicsData = topicsRes.data.data || [];
+      const lessonsData = lessonsRes.data.data || [];
+      const exercisesData = exercisesRes.data.count || 0;
+      const quizzesData = quizzesRes.data.data || [];
+      const usersData = usersRes.data.data || {};
+
+      // Tính toán thống kê theo chủ đề
+      const topicStats = topicsData.map(topic => {
+        const lessonsInTopic = lessonsData.filter(l => l.topicId?._id === topic._id || l.topicId === topic._id);
+        return {
+          name: topic.title,
+          lessons: lessonsInTopic.length,
+          exercises: 0 // Sẽ cần API riêng để lấy số câu hỏi theo topic
+        };
+      });
+
       setStats({
-        topics: topicsRes.data.count || 0,
-        lessons: lessonsRes.data.count || 0,
-        exercises: exercisesRes.data.count || 0,
-        quizzes: quizzesRes.data.count || 0,
-        users: usersRes.data.data?.totalUsers || 0,
-        students: usersRes.data.data?.totalStudents || 0,
-        admins: usersRes.data.data?.totalAdmins || 0
+        topics: topicsData.length,
+        lessons: lessonsData.length,
+        exercises: exercisesData,
+        quizzes: quizzesData.length,
+        users: usersData.totalUsers || 0,
+        students: usersData.totalStudents || 0,
+        admins: usersData.totalAdmins || 0,
+        activeUsers: usersData.activeUsers || 0,
+        completedUsers: usersData.completedUsers || 0,
+        topicStats
       });
       setLoading(false);
     } catch (err) {
@@ -45,79 +65,243 @@ const AdminDashboard = () => {
     );
   }
 
+  // Dữ liệu cho biểu đồ cột - Tổng quan hệ thống
+  const contentData = [
+    { name: 'Chủ đề', value: stats?.topics || 0, color: '#4FACFE' },
+    { name: 'Bài học', value: stats?.lessons || 0, color: '#00C853' },
+    { name: 'Câu hỏi', value: stats?.exercises || 0, color: '#9C27B0' },
+    { name: 'Quiz', value: stats?.quizzes || 0, color: '#FF9800' },
+  ];
+
+  // Dữ liệu cho biểu đồ tròn - Phân bố người dùng
+  const userDistributionData = [
+    { name: 'Học sinh', value: stats?.students || 0, color: '#4FACFE' },
+    { name: 'Admin', value: stats?.admins || 0, color: '#FF9800' },
+  ];
+
+  // Dữ liệu cho biểu đồ tròn - Hoạt động người dùng
+  const userActivityData = [
+    { name: 'Đã hoạt động', value: stats?.activeUsers || 0, color: '#00C853' },
+    { name: 'Chưa hoạt động', value: (stats?.users || 0) - (stats?.activeUsers || 0), color: '#E0E0E0' },
+  ];
+
+  // Dữ liệu cho biểu đồ cột - Bài học theo chủ đề
+  const topicLessonsData = (stats?.topicStats || []).map(item => ({
+    name: item.name.length > 10 ? item.name.substring(0, 10) + '...' : item.name,
+    'Số bài học': item.lessons
+  }));
+
+  const COLORS = ['#4FACFE', '#00C853', '#9C27B0', '#FF9800', '#F44336', '#00BCD4'];
+
   const statCards = [
-    { label: 'Chủ đề', value: stats?.topics || 0, icon: '📚', color: 'blue', link: '/admin/topics' },
-    { label: 'Bài học', value: stats?.lessons || 0, icon: '📖', color: 'green', link: '/admin/lessons' },
-    { label: 'Ngân hàng Câu hỏi', value: stats?.exercises || 0, icon: '❓', color: 'purple', link: '/admin/exercises' },
-    { label: 'Quiz', value: stats?.quizzes || 0, icon: '📝', color: 'orange', link: '/admin/quizzes' },
-    { label: 'Người dùng', value: stats?.users || 0, icon: '👥', color: 'indigo', link: '/admin/users' },
-    { label: 'Học sinh', value: stats?.students || 0, icon: '🎓', color: 'teal', link: '/admin/users?role=student' },
+    { 
+      label: 'Tổng người dùng', 
+      value: stats?.users || 0, 
+      icon: '👥', 
+      color: 'from-blue-500 to-blue-600',
+      link: '/admin/users'
+    },
+    { 
+      label: 'Học sinh', 
+      value: stats?.students || 0, 
+      icon: '🎓', 
+      color: 'from-green-500 to-green-600',
+      link: '/admin/users?role=student'
+    },
+    { 
+      label: 'Người dùng hoạt động', 
+      value: stats?.activeUsers || 0, 
+      icon: '🔥', 
+      color: 'from-orange-500 to-red-500',
+      link: '/admin/users'
+    },
+    { 
+      label: 'Chủ đề', 
+      value: stats?.topics || 0, 
+      icon: '📚', 
+      color: 'from-purple-500 to-purple-600',
+      link: '/admin/topics'
+    },
+    { 
+      label: 'Bài học', 
+      value: stats?.lessons || 0, 
+      icon: '📖', 
+      color: 'from-teal-500 to-teal-600',
+      link: '/admin/lessons'
+    },
+    { 
+      label: 'Câu hỏi', 
+      value: stats?.exercises || 0, 
+      icon: '❓', 
+      color: 'from-pink-500 to-pink-600',
+      link: '/admin/exercises'
+    },
+    { 
+      label: 'Quiz', 
+      value: stats?.quizzes || 0, 
+      icon: '📝', 
+      color: 'from-indigo-500 to-indigo-600',
+      link: '/admin/quizzes'
+    },
+    { 
+      label: 'Đã hoàn thành bài học', 
+      value: stats?.completedUsers || 0, 
+      icon: '✅', 
+      color: 'from-emerald-500 to-emerald-600',
+      link: '/admin/users'
+    },
   ];
 
   return (
-    <div>
+    <div className="space-y-6">
+      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Admin Dashboard</h1>
-        <p className="text-gray-600">Tổng quan hệ thống</p>
+        <p className="text-gray-600">Tổng quan hệ thống và thống kê</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+      {/* Stats Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((card) => (
           <Link
             key={card.label}
             to={card.link}
-            className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-shadow"
+            className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all hover:scale-105"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm mb-1">{card.label}</p>
-                <p className="text-3xl font-bold text-gray-800">{card.value}</p>
+            <div className="flex items-center justify-between mb-4">
+              <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center text-2xl`}>
+                {card.icon}
               </div>
-              <div className="text-4xl">{card.icon}</div>
             </div>
+            <p className="text-gray-600 text-sm mb-1">{card.label}</p>
+            <p className="text-3xl font-bold text-gray-800">{card.value.toLocaleString()}</p>
           </Link>
         ))}
       </div>
 
-      {/* Quick Actions */}
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Biểu đồ cột - Tổng quan nội dung */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Tổng quan nội dung hệ thống</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={contentData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" fill="#4FACFE" radius={[8, 8, 0, 0]}>
+                {contentData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Biểu đồ tròn - Phân bố người dùng */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Phân bố người dùng</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={userDistributionData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {userDistributionData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Biểu đồ tròn - Hoạt động người dùng */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Hoạt động người dùng</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={userActivityData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {userActivityData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Biểu đồ cột - Bài học theo chủ đề */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Số bài học theo chủ đề</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={topicLessonsData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="Số bài học" fill="#4FACFE" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Quick Links */}
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Thao tác nhanh</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h2 className="text-xl font-semibold mb-4 text-gray-800">Quản lý hệ thống</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Link
             to="/admin/topics"
-            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all text-center"
           >
-            <h3 className="font-semibold mb-2">📚 Quản lý Chủ đề</h3>
-            <p className="text-sm text-gray-600">Tạo, sửa, xóa chủ đề</p>
+            <div className="text-3xl mb-2">📚</div>
+            <div className="font-semibold text-sm">Chủ đề</div>
           </Link>
           <Link
             to="/admin/lessons"
-            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all text-center"
           >
-            <h3 className="font-semibold mb-2">📖 Quản lý Bài học</h3>
-            <p className="text-sm text-gray-600">Tạo, sửa bài học và upload nội dung</p>
+            <div className="text-3xl mb-2">📖</div>
+            <div className="font-semibold text-sm">Bài học</div>
           </Link>
           <Link
             to="/admin/exercises"
-            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all text-center"
           >
-            <h3 className="font-semibold mb-2">❓ Ngân hàng Câu hỏi</h3>
-            <p className="text-sm text-gray-600">Xem và quản lý tất cả câu hỏi theo chủ đề/bài/mức độ</p>
+            <div className="text-3xl mb-2">❓</div>
+            <div className="font-semibold text-sm">Câu hỏi</div>
           </Link>
           <Link
             to="/admin/quizzes"
-            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all text-center"
           >
-            <h3 className="font-semibold mb-2">📝 Quản lý Quiz</h3>
-            <p className="text-sm text-gray-600">Tạo và quản lý bài kiểm tra</p>
+            <div className="text-3xl mb-2">📝</div>
+            <div className="font-semibold text-sm">Quiz</div>
           </Link>
           <Link
             to="/admin/users"
-            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all text-center"
           >
-            <h3 className="font-semibold mb-2">👥 Quản lý Người dùng</h3>
-            <p className="text-sm text-gray-600">Xem và quản lý tài khoản người dùng</p>
+            <div className="text-3xl mb-2">👥</div>
+            <div className="font-semibold text-sm">Người dùng</div>
           </Link>
         </div>
       </div>
@@ -126,4 +310,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

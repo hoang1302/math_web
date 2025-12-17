@@ -137,7 +137,7 @@ const QuizTaking = () => {
   const isFirst = currentQuestionIndex === 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-page bg-home">
       {/* Header with Timer */}
       <div className="bg-white shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">

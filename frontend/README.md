@@ -1,4 +1,4 @@
-# Frontend - Math Web Grade 5
+# Frontend - MathVui
 
 ## Cấu trúc dự án
 

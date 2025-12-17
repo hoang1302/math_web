@@ -55,7 +55,8 @@ const Register = () => {
     );
 
     if (result.success) {
-      navigate('/');
+      // Redirect to grade selection after registration
+      navigate('/select-grade');
     } else {
       setError(result.message || 'Đăng ký thất bại');
     }
@@ -64,11 +65,11 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-page bg-home flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h2 className="text-4xl font-bold text-primary-700 mb-2">
-            🎓 Học Toán Lớp 5
+            🎓 MathVui
           </h2>
           <h3 className="text-2xl font-semibold text-gray-800">
             Đăng ký tài khoản

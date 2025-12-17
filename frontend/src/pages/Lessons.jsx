@@ -12,6 +12,45 @@ const Lessons = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const getTopicIcon = (topic) => {
+    if (!topic) return '📚';
+
+    const order = topic.order || 0;
+    const title = (topic.title || '').toLowerCase();
+
+    // Map theo số thứ tự chủ đề
+    switch (order) {
+      case 1:
+        return '🔢'; // Số và phép tính cơ bản
+      case 2:
+        return '➗'; // Phân số / chia
+      case 3:
+        return '📏'; // Hình học, đo lường
+      case 4:
+        return '📐'; // Góc, diện tích
+      case 5:
+        return '📊'; // Bảng, biểu đồ
+      case 6:
+        return '⏱️'; // Thời gian
+      case 7:
+        return '💰'; // Tiền, bài toán có lời văn
+      case 8:
+        return '🧮'; // Ôn tập tổng hợp
+      default:
+        break;
+    }
+
+    // Nếu không khớp order, đoán icon theo tiêu đề
+    if (title.includes('phân số') || title.includes('chia')) return '➗';
+    if (title.includes('hình') || title.includes('diện tích') || title.includes('chu vi')) return '📐';
+    if (title.includes('số') || title.includes('tự nhiên')) return '🔢';
+    if (title.includes('biểu đồ') || title.includes('bảng')) return '📊';
+    if (title.includes('thời gian') || title.includes('ngày')) return '⏱️';
+    if (title.includes('tiền') || title.includes('mua') || title.includes('bán')) return '💰';
+
+    return '📚';
+  };
+
   useEffect(() => {
     fetchTopics();
   }, []);
@@ -73,8 +112,8 @@ const Lessons = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      {/* Sidebar - Topics */}
-      <div className="lg:col-span-1">
+      {/* Sidebar - Topics (Hidden on mobile, shown on desktop on the left) */}
+      <div className="hidden lg:block lg:col-span-1 order-1">
         <div className="bg-white rounded-xl shadow-md p-4 sticky top-4">
           <h3 className="font-semibold text-lg mb-4">Chủ đề</h3>
           <div className="space-y-2">
@@ -89,7 +128,7 @@ const Lessons = () => {
                 }`}
               >
                 <div className="flex items-center space-x-2">
-                  <span>{topic.icon || '📚'}</span>
+                  <span>{getTopicIcon(topic)}</span>
                   <span className="text-sm">{topic.title}</span>
                 </div>
               </button>
@@ -99,11 +138,11 @@ const Lessons = () => {
       </div>
 
       {/* Main Content - Lessons */}
-      <div className="lg:col-span-3">
+      <div className="lg:col-span-3 order-2">
         {selectedTopic && (
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              {selectedTopic.icon} {selectedTopic.title}
+              {getTopicIcon(selectedTopic)} {selectedTopic.title}
             </h1>
             <p className="text-gray-600">
               {lessons.length} bài học

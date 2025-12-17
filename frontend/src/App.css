@@ -1,2 +1,62 @@
 /* Custom styles if needed */
 
+/* Background helpers
+   Đặt ảnh trong thư mục: src/assets/backgrounds/
+   Ví dụ: src/assets/backgrounds/home-bg.jpg
+*/
+
+.bg-page {
+  min-height: 100vh;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.bg-page-overlay {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+}
+
+/* Ví dụ class cho từng trang – bạn có thể đổi tên ảnh tùy ý */
+.bg-home {
+  background-image: url('./assets/backgrounds/home-bg.jpg');
+  /* Ảnh phủ toàn màn hình */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* Làm ảnh dịu/mờ hơn nhẹ bằng overlay trắng + hòa trộn (có thể chỉnh lại hoặc bỏ nếu không cần) */
+  background-color: rgba(255, 255, 255, 0.35);
+  background-blend-mode: lighten;
+}
+
+.bg-topics {
+  background-image: url('./assets/backgrounds/topics-bg.jpg');
+}
+
+.bg-lessons {
+  background-image: url('./assets/backgrounds/lessons-bg.jpg');
+}
+
+.bg-quiz {
+  background-image: url('./assets/backgrounds/quiz-bg.jpg');
+}
+
+.bg-auth {
+  background-image: url('./assets/backgrounds/auth-bg.jpg');
+}
+
+/* Card backgrounds - Ảnh cho 2 card Học bài và Thi */
+.card-study-bg {
+  background-image: url('./assets/backgrounds/study-card-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.card-quiz-bg {
+  background-image: url('./assets/backgrounds/quiz-card-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+

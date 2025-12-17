@@ -15,20 +15,31 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [selectedGrade, setSelectedGrade] = useState(null);
 
   // Check if user is logged in on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
+    const savedGrade = localStorage.getItem('selectedGrade');
     
     if (token && savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
+        const userData = JSON.parse(savedUser);
+        setUser(userData);
         setIsAuthenticated(true);
+        
+        // Lấy grade từ user profile hoặc localStorage
+        const grade = userData.profile?.grade || (savedGrade ? parseInt(savedGrade) : null);
+        if (grade) {
+          setSelectedGrade(grade);
+          localStorage.setItem('selectedGrade', grade.toString());
+        }
       } catch (error) {
         console.error('Error parsing user data:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('selectedGrade');
       }
     }
     setLoading(false);
@@ -94,6 +105,13 @@ export const AuthProvider = ({ children }) => {
       const userData = response.data.user;
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Cập nhật selectedGrade nếu có trong profile
+      if (userData.profile?.grade) {
+        setSelectedGrade(userData.profile.grade);
+        localStorage.setItem('selectedGrade', userData.profile.grade.toString());
+      }
+      
       return { success: true, data: userData };
     } catch (error) {
       return {
@@ -103,14 +121,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Set selected grade
+  const setGrade = (grade) => {
+    setSelectedGrade(grade);
+    localStorage.setItem('selectedGrade', grade.toString());
+  };
+
   const value = {
     user,
     loading,
     isAuthenticated,
+    selectedGrade,
     login,
     register,
     logout,
     getCurrentUser,
+    setGrade,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
