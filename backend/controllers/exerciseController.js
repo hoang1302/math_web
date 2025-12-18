@@ -127,12 +127,20 @@ export const getExercise = async (req, res) => {
       });
     }
 
-    // Don't send correct answer by default
-    const { correctAnswer, explanation, ...exerciseData } = exercise.toObject();
+    // By default, hide correct answer/explanation. Allow showing when explicitly requested.
+    const exerciseData = exercise.toObject();
+    if (req.query.includeAnswers === 'true') {
+      return res.status(200).json({
+        success: true,
+        data: exerciseData
+      });
+    }
+
+    const { correctAnswer, explanation, ...safeData } = exerciseData;
 
     res.status(200).json({
       success: true,
-      data: exerciseData
+      data: safeData
     });
   } catch (error) {
     if (error.name === 'CastError') {

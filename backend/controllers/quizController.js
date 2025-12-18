@@ -196,7 +196,9 @@ export const submitQuiz = async (req, res) => {
         exerciseId: exercise._id,
         userAnswer: answer.userAnswer,
         isCorrect,
-        points
+        points,
+        correctAnswer: exercise.correctAnswer,
+        explanation: exercise.explanation || ''
       });
 
       // Track topic stats (if lesson has topicId)

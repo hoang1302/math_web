@@ -70,6 +70,14 @@ const quizResultSchema = new mongoose.Schema({
     points: {
       type: Number,
       default: 0
+    },
+    correctAnswer: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null
+    },
+    explanation: {
+      type: String,
+      default: ''
     }
   }],
   // Statistics by topic

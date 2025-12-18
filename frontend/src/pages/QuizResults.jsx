@@ -11,8 +11,6 @@ const QuizResults = () => {
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(!result);
-  const [aiExplanations, setAiExplanations] = useState({});
-  const [loadingAI, setLoadingAI] = useState({});
 
   useEffect(() => {
     if (!result) {
@@ -49,36 +47,15 @@ const QuizResults = () => {
       
       // Fetch question details
       if (response.data.data.questions) {
-        const questionPromises = response.data.data.questions.map(qId =>
-          api.get(`/exercises/${qId}`)
-        );
+        const questionPromises = response.data.data.questions.map(qId => {
+          const id = typeof qId === 'string' ? qId : qId?._id;
+          return api.get(`/exercises/${id}?includeAnswers=true`);
+        });
         const questionResponses = await Promise.all(questionPromises);
         setQuestions(questionResponses.map(res => res.data.data));
       }
     } catch (err) {
       console.error('Error fetching quiz details:', err);
-    }
-  };
-
-  const getAIExplanation = async (questionIndex, exerciseId, userAnswer, correctAnswer) => {
-    if (aiExplanations[questionIndex]) {
-      return; // Already loaded
-    }
-
-    try {
-      setLoadingAI({ ...loadingAI, [questionIndex]: true });
-      
-      // Simulate AI explanation (in real app, this would call an AI API)
-      // For now, we'll use a placeholder that explains the mistake
-      const explanation = `Bạn đã trả lời "${userAnswer}" nhưng đáp án đúng là "${correctAnswer}". Hãy xem lại phần lý thuyết liên quan và làm lại bài tập tương tự để hiểu rõ hơn.`;
-      
-      setTimeout(() => {
-        setAiExplanations({ ...aiExplanations, [questionIndex]: explanation });
-        setLoadingAI({ ...loadingAI, [questionIndex]: false });
-      }, 1000);
-    } catch (err) {
-      console.error('Error getting AI explanation:', err);
-      setLoadingAI({ ...loadingAI, [questionIndex]: false });
     }
   };
 
@@ -144,6 +121,8 @@ const QuizResults = () => {
           {result.answers?.map((answer, index) => {
             const question = questions[index];
             const isWrong = !answer.isCorrect;
+            const correctAnswer = answer.correctAnswer ?? questions[index]?.correctAnswer;
+            const explanation = answer.explanation ?? questions[index]?.explanation;
             
             return (
               <div
@@ -183,64 +162,19 @@ const QuizResults = () => {
                     </p>
                   </div>
                   
-                  {!answer.isCorrect && (
-                    <div className="p-3 bg-green-100 rounded-lg border-2 border-green-300">
-                      <p className="text-sm text-green-700 mb-1 font-medium">Đáp án đúng:</p>
-                      <p className="font-bold text-lg text-green-800">
-                        <MathRenderer content={String(answer.correctAnswer || 'N/A')} />
-                      </p>
-                    </div>
-                  )}
+                  <div className="p-3 bg-green-100 rounded-lg border-2 border-green-300">
+                    <p className="text-sm text-green-700 mb-1 font-medium">Đáp án đúng:</p>
+                    <p className="font-bold text-lg text-green-800">
+                      <MathRenderer content={String(correctAnswer || 'N/A')} />
+                    </p>
+                  </div>
                 </div>
 
                 {/* Explanation */}
-                {answer.explanation && (
+                {explanation && (
                   <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <p className="text-sm text-blue-800 mb-2 font-medium">Giải thích:</p>
-                    <MathRenderer content={answer.explanation} />
-                  </div>
-                )}
-
-                {/* AI Sửa câu sai */}
-                {isWrong && (
-                  <div className="mt-4 p-4 bg-yellow-50 rounded-lg border-2 border-yellow-200">
-                    <div className="flex items-start justify-between mb-2">
-                      <p className="text-yellow-800 font-medium">🤖 Sửa câu sai theo AI:</p>
-                      {!aiExplanations[index] && !loadingAI[index] && (
-                        <button
-                          onClick={() => getAIExplanation(
-                            index,
-                            answer.exerciseId,
-                            answer.userAnswer,
-                            answer.correctAnswer
-                          )}
-                          className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition-colors"
-                        >
-                          Xem giải thích AI
-                        </button>
-                      )}
-                    </div>
-                    {loadingAI[index] && (
-                      <div className="flex items-center space-x-2 text-yellow-700">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></div>
-                        <span className="text-sm">AI đang phân tích...</span>
-                      </div>
-                    )}
-                    {aiExplanations[index] && (
-                      <div className="mt-2">
-                        <p className="text-yellow-800 text-sm leading-relaxed">
-                          {aiExplanations[index]}
-                        </p>
-                        {question?.lessonId && (
-                          <Link
-                            to={`/lessons/${typeof question.lessonId === 'object' ? question.lessonId._id : question.lessonId}`}
-                            className="text-yellow-800 hover:text-yellow-900 underline text-sm mt-2 inline-block"
-                          >
-                            Xem lại bài học liên quan →
-                          </Link>
-                        )}
-                      </div>
-                    )}
+                    <MathRenderer content={explanation} />
                   </div>
                 )}
               </div>
