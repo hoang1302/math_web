@@ -8,16 +8,11 @@ const AdminQuestionBank = () => {
   const [loading, setLoading] = useState(true);
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showAIModal, setShowAIModal] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiGeneratedQuestions, setAiGeneratedQuestions] = useState([]);
-  const [selectedAiQuestions, setSelectedAiQuestions] = useState([]);
-  const [aiFormData, setAiFormData] = useState({
-    topic: '',
-    difficulty: 'medium',
-    type: 'multiple-choice',
-    count: 5
-  });
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
+  const [previewQuestions, setPreviewQuestions] = useState([]);
+  const [importLoading, setImportLoading] = useState(false);
   const [formData, setFormData] = useState({
     lessonId: '',
     type: 'multiple-choice',
@@ -180,6 +175,79 @@ const AdminQuestionBank = () => {
     }
   };
 
+  const handleImportFromSheets = async () => {
+    if (!importUrl.trim()) {
+      alert('Vui lòng nhập URL Google Sheets');
+      return;
+    }
+
+    if (!formData.lessonId) {
+      alert('Vui lòng chọn bài học để lưu câu hỏi');
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      // Bước 1: Lấy CSV từ Google Sheets
+      const fetchResponse = await api.post('/import/fetch-sheets', { url: importUrl });
+      const csvData = fetchResponse.data.data.csvData;
+
+      // Bước 2: Parse CSV thành danh sách câu hỏi (dành cho ngân hàng bài tập, không phải quiz)
+      const parseResponse = await api.post('/import/questions', {
+        csvData,
+        lessonId: formData.lessonId,
+        forQuiz: false
+      });
+
+      if (parseResponse.data.success) {
+        setPreviewQuestions(parseResponse.data.data.questions);
+        setShowImportModal(false);
+        setShowPreviewModal(true);
+      } else {
+        alert(parseResponse.data.message || 'Có lỗi xảy ra khi import');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi import từ Google Sheets');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!formData.lessonId) {
+      alert('Vui lòng chọn bài học để lưu câu hỏi');
+      return;
+    }
+
+    try {
+      const createdIds = [];
+      for (const question of previewQuestions) {
+        try {
+          const response = await api.post('/exercises', {
+            ...question,
+            lessonId: formData.lessonId
+          });
+          createdIds.push(response.data.data._id);
+        } catch (err) {
+          console.error('Error creating exercise from import:', err);
+        }
+      }
+
+      if (createdIds.length === 0) {
+        alert('Không thể tạo câu hỏi nào. Vui lòng thử lại.');
+        return;
+      }
+
+      await fetchExercises();
+      setShowPreviewModal(false);
+      setPreviewQuestions([]);
+      setImportUrl('');
+      alert(`Đã thêm ${createdIds.length} câu hỏi vào ngân hàng!`);
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Có lỗi xảy ra khi lưu câu hỏi');
+    }
+  };
+
   const getDifficultyBadge = (difficulty) => {
     const badges = {
       easy: { bg: 'bg-green-100', text: 'text-green-700', label: 'Dễ' },
@@ -221,18 +289,10 @@ const AdminQuestionBank = () => {
         </div>
         <div className="flex space-x-3">
           <button
-            onClick={() => {
-              setAiFormData({
-                topic: '',
-                difficulty: 'medium',
-                type: 'multiple-choice',
-                count: 5
-              });
-              setShowAIModal(true);
-            }}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            onClick={() => setShowImportModal(true)}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
-            🤖 Tạo bằng AI
+            📥 Import từ Google Sheets
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -624,300 +684,184 @@ const AdminQuestionBank = () => {
         </div>
       )}
 
-      {/* AI Generate Modal */}
-      {showAIModal && (
+      {/* Import from Google Sheets Modal */}
+      {showImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">🤖 Tạo câu hỏi bằng AI</h2>
-            
-            {aiGeneratedQuestions.length === 0 ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Chủ đề / Nội dung *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={aiFormData.topic}
-                    onChange={(e) => setAiFormData({ ...aiFormData, topic: e.target.value })}
-                    placeholder="Ví dụ: Phép cộng, Phép trừ, Phân số..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Mức độ
-                    </label>
-                    <select
-                      value={aiFormData.difficulty}
-                      onChange={(e) => setAiFormData({ ...aiFormData, difficulty: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="easy">Dễ</option>
-                      <option value="medium">Trung bình</option>
-                      <option value="hard">Khó</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Loại câu hỏi
-                    </label>
-                    <select
-                      value={aiFormData.type}
-                      onChange={(e) => setAiFormData({ ...aiFormData, type: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="multiple-choice">Trắc nghiệm</option>
-                      <option value="fill-blank">Điền khuyết</option>
-                      <option value="essay">Tự luận</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Số lượng
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={aiFormData.count}
-                      onChange={(e) => setAiFormData({ ...aiFormData, count: parseInt(e.target.value) || 5 })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex space-x-4">
-                  <button
-                    onClick={async () => {
-                      if (!aiFormData.topic.trim()) {
-                        alert('Vui lòng nhập chủ đề');
-                        return;
-                      }
-                      try {
-                        setAiLoading(true);
-                        const response = await api.post('/ai/generate-exercises', {
-                          topic: aiFormData.topic,
-                          difficulty: aiFormData.difficulty,
-                          type: aiFormData.type,
-                          count: parseInt(aiFormData.count)
-                        });
-
-                        if (response.data.success) {
-                          setAiGeneratedQuestions(response.data.data);
-                          setSelectedAiQuestions(response.data.data.map((_, index) => index));
-                        } else {
-                          alert(response.data.message || 'Có lỗi xảy ra khi tạo câu hỏi');
-                        }
-                      } catch (err) {
-                        console.error('Error generating AI questions:', err);
-                        alert(err.response?.data?.message || 'Có lỗi xảy ra khi tạo câu hỏi bằng AI');
-                      } finally {
-                        setAiLoading(false);
-                      }
-                    }}
-                    disabled={aiLoading || !aiFormData.topic.trim()}
-                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {aiLoading ? 'Đang tạo...' : '🤖 Tạo câu hỏi'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowAIModal(false);
-                      setAiGeneratedQuestions([]);
-                      setSelectedAiQuestions([]);
-                    }}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                  >
-                    Hủy
-                  </button>
-                </div>
-              </div>
-            ) : (
+          <div className="bg-white rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Import câu hỏi từ Google Sheets</h2>
+            <div className="space-y-4">
               <div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Chọn bài học để lưu câu hỏi *
-                  </label>
-                  <select
-                    value={selectedTopic}
-                    onChange={(e) => {
-                      setSelectedTopic(e.target.value);
-                      fetchLessons(e.target.value);
-                    }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 mb-2"
-                  >
-                    <option value="">Chọn chủ đề</option>
-                    {topics.map((topic) => (
-                      <option key={topic._id} value={topic._id}>
-                        {topic.title}
-                      </option>
-                    ))}
-                  </select>
-                  {selectedTopic && (
-                    <select
-                      value={formData.lessonId}
-                      onChange={(e) => setFormData({ ...formData, lessonId: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="">Chọn bài học</option>
-                      {lessons.map((lesson) => (
-                        <option key={lesson._id} value={lesson._id}>
-                          Bài {lesson.order}: {lesson.title}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                <div className="mb-4 flex justify-between items-center">
-                  <p className="text-sm text-gray-600">
-                    Đã tạo {aiGeneratedQuestions.length} câu hỏi. Chọn câu hỏi muốn lưu:
-                  </p>
-                  <button
-                    onClick={() => {
-                      setAiGeneratedQuestions([]);
-                      setSelectedAiQuestions([]);
-                    }}
-                    className="text-sm text-gray-600 hover:text-gray-800"
-                  >
-                    Tạo lại
-                  </button>
-                </div>
-
-                <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
-                  {aiGeneratedQuestions.map((question, index) => (
-                    <div
-                      key={index}
-                      className={`border-2 rounded-lg p-4 ${
-                        selectedAiQuestions.includes(index)
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200 bg-white'
-                      }`}
-                    >
-                      <div className="flex items-start space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedAiQuestions.includes(index)}
-                          onChange={() => {
-                            setSelectedAiQuestions(prev =>
-                              prev.includes(index)
-                                ? prev.filter(i => i !== index)
-                                : [...prev, index]
-                            );
-                          }}
-                          className="mt-1"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded text-sm font-medium">
-                              Câu {index + 1}
-                            </span>
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              question.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                              question.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {question.difficulty === 'easy' ? 'Dễ' : 
-                               question.difficulty === 'medium' ? 'Trung bình' : 'Khó'}
-                            </span>
-                          </div>
-                          <p className="font-medium mb-3">{question.question}</p>
-                          
-                          {question.type === 'multiple-choice' && question.options && (
-                            <div className="space-y-2 mb-3">
-                              {question.options.map((option, optIndex) => (
-                                <div
-                                  key={optIndex}
-                                  className={`p-2 rounded ${
-                                    option === question.correctAnswer
-                                      ? 'bg-green-50 border-2 border-green-300'
-                                      : 'bg-gray-50 border border-gray-200'
-                                  }`}
-                                >
-                                  <span className="font-medium">
-                                    {String.fromCharCode(65 + optIndex)}. {option}
-                                  </span>
-                                  {option === question.correctAnswer && (
-                                    <span className="ml-2 text-green-600 font-semibold">✓ Đúng</span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {question.explanation && (
-                            <div className="mt-3 p-2 bg-blue-50 rounded">
-                              <p className="text-sm text-gray-700">
-                                <strong>Giải thích:</strong> {question.explanation}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Chủ đề *
+                </label>
+                <select
+                  required
+                  value={selectedTopic}
+                  onChange={(e) => {
+                    setSelectedTopic(e.target.value);
+                    setFormData({ ...formData, lessonId: '' });
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Chọn chủ đề</option>
+                  {topics.map((topic) => (
+                    <option key={topic._id} value={topic._id}>
+                      {topic.title}
+                    </option>
                   ))}
-                </div>
-
-                <div className="flex space-x-4">
-                  <button
-                    onClick={async () => {
-                      if (!formData.lessonId) {
-                        alert('Vui lòng chọn bài học để lưu câu hỏi');
-                        return;
-                      }
-                      if (selectedAiQuestions.length === 0) {
-                        alert('Vui lòng chọn ít nhất một câu hỏi để lưu');
-                        return;
-                      }
-
-                      try {
-                        const questionsToSave = selectedAiQuestions.map(index => {
-                          const question = aiGeneratedQuestions[index];
-                          return {
-                            ...question,
-                            lessonId: formData.lessonId
-                          };
-                        });
-
-                        const promises = questionsToSave.map(question =>
-                          api.post('/exercises', question)
-                        );
-
-                        await Promise.all(promises);
-                        alert(`Đã lưu thành công ${selectedAiQuestions.length} câu hỏi!`);
-                        setShowAIModal(false);
-                        setAiGeneratedQuestions([]);
-                        setSelectedAiQuestions([]);
-                        await fetchExercises();
-                      } catch (err) {
-                        alert(err.response?.data?.message || 'Có lỗi xảy ra khi lưu câu hỏi');
-                      }
-                    }}
-                    disabled={selectedAiQuestions.length === 0 || !formData.lessonId}
-                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Lưu {selectedAiQuestions.length > 0 ? `${selectedAiQuestions.length} ` : ''}câu hỏi đã chọn
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowAIModal(false);
-                      setAiGeneratedQuestions([]);
-                      setSelectedAiQuestions([]);
-                    }}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                  >
-                    Hủy
-                  </button>
-                </div>
+                </select>
               </div>
-            )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bài học *
+                </label>
+                <select
+                  required
+                  value={formData.lessonId}
+                  onChange={(e) => setFormData({ ...formData, lessonId: e.target.value })}
+                  disabled={!selectedTopic}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100"
+                >
+                  <option value="">Chọn bài học</option>
+                  {lessons.map((lesson) => (
+                    <option key={lesson._id} value={lesson._id}>
+                      Bài {lesson.order}: {lesson.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  URL Google Sheets *
+                </label>
+                <input
+                  type="url"
+                  value={importUrl}
+                  onChange={(e) => setImportUrl(e.target.value)}
+                  placeholder="https://docs.google.com/spreadsheets/d/..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Lưu ý: Google Sheets phải được chia sẻ công khai hoặc có quyền xem.
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Cấu trúc: STT | Độ khó | Điểm | Câu hỏi | Đáp án A | Đáp án B | Đáp án C | Đáp án D | Đáp án đúng | Giải thích
+                </p>
+              </div>
+
+              <div className="flex space-x-4 mt-4">
+                <button
+                  onClick={handleImportFromSheets}
+                  disabled={importLoading || !importUrl.trim()}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {importLoading ? 'Đang tải...' : 'Tải và Preview'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setImportUrl('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                  Hủy
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Preview Imported Questions Modal */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">
+              Preview - {previewQuestions.length} câu hỏi
+            </h2>
+            <div className="space-y-4 mb-6">
+              {previewQuestions.map((question, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded text-sm font-medium">
+                        Câu {index + 1}
+                      </span>
+                      <span
+                        className={`px-2 py-1 rounded text-xs ${
+                          question.difficulty === 'easy'
+                            ? 'bg-green-100 text-green-700'
+                            : question.difficulty === 'medium'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {question.difficulty === 'easy'
+                          ? 'Dễ'
+                          : question.difficulty === 'medium'
+                          ? 'Trung bình'
+                          : 'Khó'}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {question.points} điểm
+                      </span>
+                    </div>
+                  </div>
+                  <p className="font-medium mb-3">{question.question}</p>
+                  <div className="space-y-2">
+                    {question.options.map((option, optIndex) => (
+                      <div
+                        key={optIndex}
+                        className={`p-2 rounded ${
+                          option === question.correctAnswer
+                            ? 'bg-green-50 border-2 border-green-300'
+                            : 'bg-gray-50 border border-gray-200'
+                        }`}
+                      >
+                        <span className="font-medium">
+                          {String.fromCharCode(65 + optIndex)}. {option}
+                        </span>
+                        {option === question.correctAnswer && (
+                          <span className="ml-2 text-green-600 font-semibold">
+                            ✓ Đúng
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {question.explanation && (
+                    <div className="mt-3 p-2 bg-blue-50 rounded">
+                      <p className="text-sm text-gray-700">
+                        <strong>Giải thích:</strong> {question.explanation}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex space-x-4">
+              <button
+                onClick={handleConfirmImport}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              >
+                Xác nhận và thêm vào ngân hàng ({previewQuestions.length} câu hỏi)
+              </button>
+              <button
+                onClick={() => {
+                  setShowPreviewModal(false);
+                  setPreviewQuestions([]);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -77,7 +77,6 @@ import badgeRoutes from './routes/badgeRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import importRoutes from './routes/importRoutes.js';
 import userRoutes from './routes/userRoutes.js';
-import aiRoutes from './routes/aiRoutes.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/topics', topicRoutes);
@@ -89,7 +88,6 @@ app.use('/api/badges', badgeRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/ai', aiRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

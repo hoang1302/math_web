@@ -224,7 +224,7 @@ const GradeSelection = () => {
           transition={{ delay: 0.8 }}
           className="mt-16 text-center"
         >
-          <p className="text-sm text-gray-600 mb-2">Design by group 29:</p>
+          <p className="text-sm text-gray-600 mb-2">Design by group 32:</p>
           <div className="text-sm text-gray-700 space-y-1">
             <p>Nguyễn Văn Hoàng</p>
             <p>Nguyễn Công Anh Nguyên</p>
