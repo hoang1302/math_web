@@ -73,7 +73,7 @@ const QuizResults = () => {
       <div className="text-center py-12">
         <p className="text-red-600 mb-4">Không tìm thấy kết quả</p>
         <Link to="/exam" className="text-primary-600 hover:underline">
-          Quay lại danh sách bài thi
+          Quay lại danh sách bài luyện tập
         </Link>
       </div>
     );
@@ -190,13 +190,13 @@ const QuizResults = () => {
             onClick={() => navigate(`/quiz/${id}`)}
             className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors"
           >
-            🔄 Làm lại bài thi
+            🔄 Làm lại bài luyện tập
           </button>
           <Link
             to="/quiz"
             className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors text-center"
           >
-            Danh sách bài thi
+            Danh sách bài luyện tập
           </Link>
           <Link
             to="/"

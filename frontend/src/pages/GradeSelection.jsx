@@ -108,7 +108,7 @@ const GradeSelection = () => {
           className="text-center mb-12"
         >
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-            Hế lô! Hãy lựa chọn lớp học của mình.
+            Xin chào! Hãy lựa chọn lớp học của mình.
           </h1>
         </motion.div>
 

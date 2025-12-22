@@ -98,18 +98,23 @@ export const register = async (req, res) => {
 // @access  Public
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
     // Validation
-    if (!email || !password) {
+    if (!username || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email and password'
+        message: 'Please provide username/email and password'
       });
     }
 
-    // Check for user and include password field
-    const user = await User.findOne({ email }).select('+password');
+    // Check for user by username or email and include password field
+    const user = await User.findOne({
+      $or: [
+        { username: username },
+        { email: username }
+      ]
+    }).select('+password');
 
     if (!user) {
       return res.status(401).json({

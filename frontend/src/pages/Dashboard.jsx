@@ -216,8 +216,8 @@ const Dashboard = () => {
             className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg text-center hover:shadow-lg transition-all transform hover:scale-105"
           >
             <div className="text-5xl mb-3">📝</div>
-            <p className="font-bold text-lg mb-2">Thi</p>
-            <p className="text-xs text-gray-600">Chọn bài thi lớn → Làm bài → Xem đáp án → Sửa sai</p>
+            <p className="font-bold text-lg mb-2">Luyện tập</p>
+            <p className="text-xs text-gray-600">Chọn bài luyện tập lớn → Làm bài → Xem đáp án → Sửa sai</p>
           </Link>
           <Link
             to="/progress"

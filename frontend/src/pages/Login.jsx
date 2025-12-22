@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: '',
   });
   const [error, setError] = useState('');
@@ -26,13 +26,13 @@ const Login = () => {
     setLoading(true);
 
     // Validation
-    if (!formData.email || !formData.password) {
+    if (!formData.username || !formData.password) {
       setError('Vui lòng điền đầy đủ thông tin');
       setLoading(false);
       return;
     }
 
-    const result = await login(formData.email, formData.password);
+    const result = await login(formData.username, formData.password);
 
     if (result.success) {
       // Redirect admin to admin panel, others to grade selection
@@ -73,21 +73,21 @@ const Login = () => {
 
             <div>
               <label
-                htmlFor="email"
+                htmlFor="username"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Email
+                Tên đăng nhập hoặc Email
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
                 required
-                value={formData.email}
+                value={formData.username}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-lg"
-                placeholder="Nhập email của bạn"
+                placeholder="Nhập tên đăng nhập hoặc email của bạn"
               />
             </div>
 

@@ -101,7 +101,7 @@ function Home() {
             animate={{ opacity: 1, x: 0 }}
           >
             <h2 className="text-3xl md:text-4xl font-heading font-bold text-gray-900 drop-shadow-[0_2px_8px_rgba(255,255,255,0.9)]">
-              Hế lô! Cùng học nhé {user?.profile?.fullName || user?.username || 'Bạn'}{' '}
+              Xin chào! Cùng học nhé {user?.profile?.fullName || user?.username || 'Bạn'}{' '}
               <motion.span
                 animate={waveAnimation ? { rotate: [0, 20, -20, 0] } : {}}
                 transition={{ duration: 0.5 }}
@@ -166,7 +166,7 @@ function Home() {
             </Link>
           </motion.div>
 
-          {/* Thi Card */}
+          {/* Luyện tập Card */}
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
