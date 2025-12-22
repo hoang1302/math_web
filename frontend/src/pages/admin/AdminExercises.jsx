@@ -229,16 +229,62 @@ const AdminExercises = () => {
 
   const handleConfirmImport = async () => {
     try {
-      const promises = previewQuestions.map(question =>
-        api.post('/exercises', question)
+      if (!lessonId) {
+        alert('Không tìm thấy bài học. Vui lòng quay lại trang trước.');
+        return;
+      }
+
+      // Fetch existing exercises for this lesson to check duplicates
+      const existingExercisesResponse = await api.get('/exercises', {
+        params: { lessonId: lessonId, includeAnswers: 'true' }
+      });
+      const existingExercises = existingExercisesResponse.data.data || [];
+      
+      // Create a set of existing question texts (normalized) for quick lookup
+      const existingQuestionTexts = new Set(
+        existingExercises.map(ex => ex.question.trim().toLowerCase())
       );
 
-      await Promise.all(promises);
-      alert(`Đã import thành công ${previewQuestions.length} câu hỏi!`);
+      const createdIds = [];
+      const skippedDuplicates = [];
+      
+      for (const question of previewQuestions) {
+        // Check if question already exists (case-insensitive comparison)
+        const normalizedQuestion = question.question.trim().toLowerCase();
+        
+        if (existingQuestionTexts.has(normalizedQuestion)) {
+          skippedDuplicates.push(question.question.substring(0, 50) + '...');
+          continue; // Skip duplicate
+        }
+
+        try {
+          const response = await api.post('/exercises', {
+            ...question,
+            lessonId: lessonId
+          });
+          createdIds.push(response.data.data._id);
+          // Add to existing set to avoid duplicates within the same import
+          existingQuestionTexts.add(normalizedQuestion);
+        } catch (err) {
+          console.error('Error creating exercise from import:', err);
+        }
+      }
+
+      if (createdIds.length === 0 && skippedDuplicates.length === 0) {
+        alert('Không thể tạo câu hỏi nào. Vui lòng thử lại.');
+        return;
+      }
+
+      await fetchExercises();
       setShowPreviewModal(false);
       setPreviewQuestions([]);
       setImportUrl('');
-      await fetchExercises();
+      
+      let message = `Đã import thành công ${createdIds.length} câu hỏi!`;
+      if (skippedDuplicates.length > 0) {
+        message += `\nĐã bỏ qua ${skippedDuplicates.length} câu hỏi trùng lặp.`;
+      }
+      alert(message);
     } catch (err) {
       alert(err.response?.data?.message || 'Có lỗi xảy ra khi lưu câu hỏi');
     }
