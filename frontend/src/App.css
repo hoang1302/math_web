@@ -45,7 +45,7 @@
   background-image: url('./assets/backgrounds/auth-bg.jpg');
 }
 
-/* Card backgrounds - Ảnh cho 2 card Học bài và Luyện tập */
+/* Card backgrounds - Ảnh cho 2 card Học bài và Thi */
 .card-study-bg {
   background-image: url('./assets/backgrounds/study-card-bg.jpg');
   background-size: cover;

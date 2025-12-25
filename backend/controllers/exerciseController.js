@@ -6,12 +6,16 @@ import Lesson from '../models/Lesson.js';
 // @access  Public
 export const getExercises = async (req, res) => {
   try {
-    const { lessonId, difficulty, type, topicId, includeAnswers } = req.query;
+    const { lessonId, difficulty, type, topicId, includeAnswers, search } = req.query;
     
     let query = { isActive: true };
     
     if (lessonId) {
       query.lessonId = lessonId;
+    } else if (topicId) {
+      // Only filter by topicId if lessonId is not provided
+      const lessonIds = await Lesson.find({ topicId, isActive: true }).distinct('_id');
+      query.lessonId = { $in: lessonIds };
     }
     
     if (difficulty) {
@@ -22,10 +26,9 @@ export const getExercises = async (req, res) => {
       query.type = type;
     }
 
-    // If topicId is provided, filter by topic
-    if (topicId) {
-      const lessonIds = await Lesson.find({ topicId, isActive: true }).distinct('_id');
-      query.lessonId = { $in: lessonIds };
+    // Add search functionality for question content
+    if (search) {
+      query.question = { $regex: search, $options: 'i' }; // case-insensitive search
     }
 
     const exercises = await Exercise.find(query)

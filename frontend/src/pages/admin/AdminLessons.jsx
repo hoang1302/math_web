@@ -9,7 +9,6 @@ const AdminLessons = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingLesson, setEditingLesson] = useState(null);
-  const [uploadingPDF, setUploadingPDF] = useState(false);
   const [formData, setFormData] = useState({
     topicId: '',
     title: '',
@@ -98,35 +97,6 @@ const AdminLessons = () => {
     }
   };
 
-  const handlePDFUpload = async (e, lessonId) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf') {
-      alert('Chỉ chấp nhận file PDF');
-      return;
-    }
-
-    setUploadingPDF(true);
-    try {
-      const formData = new FormData();
-      formData.append('pdf', file);
-
-      await api.post(`/upload/lesson/${lessonId}/pdf`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      alert('Upload PDF thành công!');
-      await fetchLessons(selectedTopicId);
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi upload PDF');
-    } finally {
-      setUploadingPDF(false);
-    }
-  };
-
   const resetForm = () => {
     setFormData({
       topicId: selectedTopicId,
@@ -212,7 +182,7 @@ const AdminLessons = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">STT</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên bài học</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Slides</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PDF/Video</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Video</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
             </tr>
           </thead>
@@ -229,13 +199,9 @@ const AdminLessons = () => {
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm">
-                  {lesson.pdfUrl && (
-                    <span className="text-green-600">📄 PDF</span>
-                  )}
-                  {lesson.videoUrl && (
-                    <span className="text-blue-600 ml-2">🎥 Video</span>
-                  )}
-                  {!lesson.pdfUrl && !lesson.videoUrl && (
+                  {lesson.videoUrl ? (
+                    <span className="text-blue-600">🎥 Video</span>
+                  ) : (
                     <span className="text-gray-400">-</span>
                   )}
                 </td>
@@ -247,16 +213,6 @@ const AdminLessons = () => {
                     >
                       Sửa
                     </button>
-                    <label className="text-blue-600 hover:text-blue-700 cursor-pointer">
-                      📄 Upload PDF
-                      <input
-                        type="file"
-                        accept="application/pdf"
-                        onChange={(e) => handlePDFUpload(e, lesson._id)}
-                        className="hidden"
-                        disabled={uploadingPDF}
-                      />
-                    </label>
                     <Link
                       to={`/admin/lessons/${lesson._id}/exercises`}
                       className="text-purple-600 hover:text-purple-700"
@@ -429,9 +385,6 @@ const AdminLessons = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                   placeholder="https://www.youtube.com/watch?v=..."
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Hoặc upload PDF sau khi tạo bài học
-                </p>
               </div>
               <div className="flex space-x-4">
                 <button

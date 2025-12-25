@@ -65,8 +65,8 @@ const QuizList = () => {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Luyện tập</h1>
-        <p className="text-gray-600">Chọn chủ đề và quiz để bắt đầu làm bài luyện tập</p>
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Thi</h1>
+        <p className="text-gray-600">Chọn chủ đề và quiz để bắt đầu làm bài thi</p>
       </div>
 
       {/* Topic Selection */}

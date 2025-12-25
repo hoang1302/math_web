@@ -26,6 +26,7 @@ const AdminQuizzes = () => {
   const [selectedBankDifficulty, setSelectedBankDifficulty] = useState('');
   const [selectedBankType, setSelectedBankType] = useState('');
   const [selectedExerciseIds, setSelectedExerciseIds] = useState([]);
+  const [randomCount, setRandomCount] = useState(5);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -226,7 +227,7 @@ const AdminQuizzes = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Bạn có chắc muốn xóa bài luyện tập này?')) return;
+    if (!window.confirm('Bạn có chắc muốn xóa bài thi này?')) return;
     
     try {
       await api.delete(`/quizzes/${id}`);
@@ -316,6 +317,33 @@ const AdminQuizzes = () => {
     });
     
     setSelectedExerciseIds([]);
+    setShowQuestionBankModal(false);
+  };
+
+  const handleAddRandomExercises = () => {
+    // Filter out already added questions
+    const availableExercises = bankExercises.filter(ex => 
+      !formData.questions.includes(ex._id)
+    );
+    
+    if (availableExercises.length === 0) {
+      alert('Không còn câu hỏi nào để thêm từ bộ lọc hiện tại');
+      return;
+    }
+    
+    const count = Math.min(randomCount, availableExercises.length);
+    
+    // Shuffle and pick random exercises
+    const shuffled = [...availableExercises].sort(() => Math.random() - 0.5);
+    const randomExercises = shuffled.slice(0, count);
+    const randomIds = randomExercises.map(ex => ex._id);
+    
+    setFormData({
+      ...formData,
+      questions: [...formData.questions, ...randomIds]
+    });
+    
+    alert(`Đã thêm ngẫu nhiên ${count} câu hỏi vào bài thi!`);
     setShowQuestionBankModal(false);
   };
 
@@ -412,7 +440,7 @@ const AdminQuizzes = () => {
       setShowPreviewModal(false);
       setPreviewQuestions([]);
       setImportUrl('');
-      alert(`Đã thêm ${createdExerciseIds.length} câu hỏi vào bài luyện tập!`);
+      alert(`Đã thêm ${createdExerciseIds.length} câu hỏi vào bài thi!`);
     } catch (err) {
       alert(err.response?.data?.message || err.message || 'Có lỗi xảy ra khi import câu hỏi');
     }
@@ -460,7 +488,7 @@ const AdminQuizzes = () => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Quản lý Quiz/Bài luyện tập</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Quản lý Quiz/Bài thi</h1>
           <p className="text-gray-600">Tạo và quản lý bài kiểm tra</p>
         </div>
         <button
@@ -470,7 +498,7 @@ const AdminQuizzes = () => {
           }}
           className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
         >
-          + Tạo bài luyện tập mới
+          + Tạo bài thi mới
         </button>
       </div>
 
@@ -479,7 +507,7 @@ const AdminQuizzes = () => {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên bài luyện tập</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên bài thi</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mô tả</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Số câu</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thời gian</th>
@@ -515,7 +543,7 @@ const AdminQuizzes = () => {
         </table>
         {quizzes.length === 0 && (
           <div className="text-center py-12 text-gray-500">
-            Chưa có bài luyện tập nào. Hãy tạo bài luyện tập đầu tiên!
+            Chưa có bài thi nào. Hãy tạo bài thi đầu tiên!
           </div>
         )}
       </div>
@@ -525,12 +553,12 @@ const AdminQuizzes = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">
-              {editingQuiz ? 'Sửa bài luyện tập' : 'Tạo bài luyện tập mới'}
+              {editingQuiz ? 'Sửa bài thi' : 'Tạo bài thi mới'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tên bài luyện tập *
+                  Tên bài thi *
                 </label>
                 <input
                   type="text"
@@ -827,7 +855,7 @@ const AdminQuizzes = () => {
                   onClick={addQuestion}
                   className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
                 >
-                  Thêm vào bài luyện tập
+                  Thêm vào bài thi
                 </button>
                 <button
                   type="button"
@@ -953,7 +981,7 @@ const AdminQuizzes = () => {
                 onClick={handleConfirmImport}
                 className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
               >
-                Xác nhận và Thêm vào bài luyện tập ({previewQuestions.length} câu hỏi)
+                Xác nhận và Thêm vào bài thi ({previewQuestions.length} câu hỏi)
               </button>
               <button
                 onClick={() => {
@@ -1045,6 +1073,35 @@ const AdminQuizzes = () => {
                   <option value="essay">Tự luận</option>
                 </select>
               </div>
+            </div>
+
+            {/* Random Selection */}
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm font-medium text-blue-800">🎲 Chọn ngẫu nhiên:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={bankExercises.filter(ex => !formData.questions.includes(ex._id)).length || 100}
+                    value={randomCount}
+                    onChange={(e) => setRandomCount(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-20 px-3 py-1 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-center"
+                  />
+                  <span className="text-sm text-blue-700">câu hỏi</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddRandomExercises}
+                  disabled={bankExercises.filter(ex => !formData.questions.includes(ex._id)).length === 0}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  🎲 Thêm ngẫu nhiên
+                </button>
+              </div>
+              <p className="text-xs text-blue-600 mt-2">
+                Có {bankExercises.filter(ex => !formData.questions.includes(ex._id)).length} câu hỏi khả dụng từ bộ lọc hiện tại
+              </p>
             </div>
 
             {/* Selected count */}

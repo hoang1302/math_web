@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '../../utils/api';
 
 const AdminQuestionBank = () => {
@@ -30,6 +30,7 @@ const AdminQuestionBank = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
   useEffect(() => {
     fetchTopics();
@@ -38,7 +39,7 @@ const AdminQuestionBank = () => {
 
   useEffect(() => {
     fetchExercises();
-  }, [selectedTopic, selectedLesson, selectedDifficulty, selectedType]);
+  }, [selectedTopic, selectedLesson, selectedDifficulty, selectedType, debouncedSearchTerm]);
 
   useEffect(() => {
     if (selectedTopic) {
@@ -48,6 +49,15 @@ const AdminQuestionBank = () => {
       setSelectedLesson('');
     }
   }, [selectedTopic]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const fetchTopics = async () => {
     try {
@@ -75,17 +85,12 @@ const AdminQuestionBank = () => {
         ...(selectedTopic && { topicId: selectedTopic }),
         ...(selectedLesson && { lessonId: selectedLesson }),
         ...(selectedDifficulty && { difficulty: selectedDifficulty }),
-        ...(selectedType && { type: selectedType })
+        ...(selectedType && { type: selectedType }),
+        ...(debouncedSearchTerm && { search: debouncedSearchTerm })
       };
       
       const response = await api.get('/exercises', { params });
-      let exercisesData = response.data.data || [];
-      
-      if (searchTerm) {
-        exercisesData = exercisesData.filter(ex => 
-          ex.question.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      }
+      const exercisesData = response.data.data || [];
       
       setExercises(exercisesData);
       setLoading(false);
@@ -344,7 +349,6 @@ const AdminQuestionBank = () => {
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                fetchExercises();
               }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             />

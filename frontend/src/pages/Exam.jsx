@@ -45,7 +45,7 @@ const Exam = () => {
       setQuizzes(quizzesData);
       setLoading(false);
     } catch (err) {
-      setError('Không thể tải danh sách bài luyện tập');
+      setError('Không thể tải danh sách bài thi');
       setLoading(false);
     }
   };
@@ -70,8 +70,8 @@ const Exam = () => {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">📝 Bài luyện tập lớn</h1>
-        <p className="text-gray-600">Chọn bài luyện tập lớn theo từng chủ đề để làm bài</p>
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">📝 Bài thi lớn</h1>
+        <p className="text-gray-600">Chọn bài thi lớn theo từng chủ đề để làm bài</p>
       </div>
 
       {/* Filter by Topic */}
@@ -153,7 +153,7 @@ const Exam = () => {
               </div>
             </div>
             <div className="mt-4 flex items-center text-purple-600 font-medium">
-              Bắt đầu làm bài luyện tập
+              Bắt đầu làm bài thi
               <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
             </div>
           </Link>
@@ -164,8 +164,8 @@ const Exam = () => {
         <div className="text-center py-12 bg-white rounded-xl shadow-md">
           <p className="text-gray-600">
             {selectedTopic 
-              ? 'Chưa có bài luyện tập nào cho chủ đề này' 
-              : 'Chưa có bài luyện tập nào'}
+              ? 'Chưa có bài thi nào cho chủ đề này' 
+              : 'Chưa có bài thi nào'}
           </p>
         </div>
       )}
