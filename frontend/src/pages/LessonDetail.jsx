@@ -31,6 +31,14 @@ const LessonDetail = () => {
 
   useEffect(() => {
     if (id) {
+      // Reset practice state when switching to a new lesson
+      setPracticeStarted(false);
+      setUserAnswers({});
+      setPracticeResults({});
+      setCheckingAnswers({});
+      setPracticeCompleted(false);
+      setProgressUpdated(false);
+      
       fetchLesson();
       fetchExercises();
     } else {
