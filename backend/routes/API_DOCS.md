@@ -61,7 +61,7 @@ http://localhost:5000/api
 ---
 
 ### 2. Login User
-Đăng nhập với email và password.
+Đăng nhập với username hoặc email và password.
 
 **Endpoint:** `POST /api/auth/login`
 
@@ -70,7 +70,7 @@ http://localhost:5000/api
 **Request Body:**
 ```json
 {
-  "email": "user@example.com",
+  "email": "user@example.com hoặc username",
   "password": "password123"
 }
 ```

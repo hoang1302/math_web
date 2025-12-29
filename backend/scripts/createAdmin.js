@@ -13,22 +13,33 @@ const createAdmin = async () => {
     await mongoose.connect(MONGODB_URI);
     console.log('✅ Connected to MongoDB');
 
-    // Check if admin already exists
-    const existingAdmin = await User.findOne({ email: 'admin@mathweb.com' });
+    // Check if admin already exists (search by old or new credentials)
+    const existingAdmin = await User.findOne({
+      $or: [
+        { email: 'admin@gmail.com' },
+        { email: 'admin@mathweb.com' },
+        { username: 'admin' },
+        { role: 'admin' }
+      ]
+    });
     
     if (existingAdmin) {
       // Update existing admin
+      existingAdmin.username = 'admin';
+      existingAdmin.email = 'admin@gmail.com';
+      existingAdmin.password = '123456';
       existingAdmin.role = 'admin';
       await existingAdmin.save();
       console.log('✅ Admin user updated successfully');
-      console.log('📧 Email: admin@mathweb.com');
-      console.log('🔑 Password: (your existing password)');
+      console.log('👤 Username: admin');
+      console.log('📧 Email: admin@gmail.com');
+      console.log('🔑 Password: 123456');
     } else {
       // Create new admin user
       const admin = await User.create({
         username: 'admin',
-        email: 'admin@mathweb.com',
-        password: 'admin123', // Default password - change this!
+        email: 'admin@gmail.com',
+        password: '123456',
         role: 'admin',
         profile: {
           fullName: 'Administrator'
@@ -36,9 +47,9 @@ const createAdmin = async () => {
       });
 
       console.log('✅ Admin user created successfully!');
-      console.log('📧 Email: admin@mathweb.com');
-      console.log('🔑 Password: admin123');
-      console.log('⚠️  IMPORTANT: Please change the password after first login!');
+      console.log('👤 Username: admin');
+      console.log('📧 Email: admin@gmail.com');
+      console.log('🔑 Password: 123456');
     }
 
     process.exit(0);

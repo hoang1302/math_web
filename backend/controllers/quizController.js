@@ -8,12 +8,17 @@ import { checkAndAwardBadges } from './badgeController.js';
 // @access  Public
 export const getQuizzes = async (req, res) => {
   try {
-    const { topicId } = req.query;
+    const { topicId, grade } = req.query;
     let query = { isActive: true };
 
     // Filter by topicId if provided
     if (topicId) {
       query.topics = topicId;
+    }
+    
+    // Filter by grade if provided
+    if (grade) {
+      query.grade = parseInt(grade);
     }
 
     const quizzes = await Quiz.find(query)

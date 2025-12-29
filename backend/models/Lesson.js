@@ -19,10 +19,6 @@ const lessonSchema = new mongoose.Schema({
     type: [String],
     default: []
   },
-  videoUrl: {
-    type: String,
-    default: ''
-  },
   pdfUrl: {
     type: String,
     default: ''
@@ -34,10 +30,6 @@ const lessonSchema = new mongoose.Schema({
   order: {
     type: Number,
     required: [true, 'Lesson order is required']
-  },
-  estimatedTime: {
-    type: Number, // in minutes
-    default: 15
   },
   isActive: {
     type: Boolean,

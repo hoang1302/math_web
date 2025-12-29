@@ -11,6 +11,12 @@ const quizSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  grade: {
+    type: Number,
+    enum: [1, 2, 3, 4, 5],
+    required: [true, 'Grade is required'],
+    default: 5
+  },
   // Array of exercise IDs
   questions: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -71,6 +77,8 @@ quizSchema.pre('save', async function(next) {
 // Index for faster queries
 quizSchema.index({ createdBy: 1 });
 quizSchema.index({ isActive: 1 });
+quizSchema.index({ grade: 1 });
+quizSchema.index({ grade: 1, isActive: 1 });
 
 const Quiz = mongoose.model('Quiz', quizSchema);
 

@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../utils/api';
+import { useAdminGrade } from '../../context/AdminGradeContext';
 
 const AdminLessons = () => {
+  const { selectedGrade } = useAdminGrade();
   const [topics, setTopics] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [selectedTopicId, setSelectedTopicId] = useState('');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingLesson, setEditingLesson] = useState(null);
+  const [exerciseCounts, setExerciseCounts] = useState({});
   const [formData, setFormData] = useState({
     topicId: '',
     title: '',
     content: '',
     slides: [],
-    order: '',
-    estimatedTime: 15,
-    videoUrl: ''
+    order: ''
   });
   const [slideInput, setSlideInput] = useState('');
 
@@ -49,7 +50,22 @@ const AdminLessons = () => {
   const fetchLessons = async (topicId) => {
     try {
       const response = await api.get(`/lessons?topicId=${topicId}`);
-      setLessons(response.data.data || []);
+      const lessonsData = response.data.data || [];
+      setLessons(lessonsData);
+      
+      // Fetch exercise counts for each lesson
+      const counts = {};
+      await Promise.all(
+        lessonsData.map(async (lesson) => {
+          try {
+            const exercisesRes = await api.get(`/exercises?lessonId=${lesson._id}`);
+            counts[lesson._id] = exercisesRes.data.data?.length || 0;
+          } catch (err) {
+            counts[lesson._id] = 0;
+          }
+        })
+      );
+      setExerciseCounts(counts);
     } catch (err) {
       console.error('Error fetching lessons:', err);
     }
@@ -78,9 +94,7 @@ const AdminLessons = () => {
       title: lesson.title,
       content: lesson.content || '',
       slides: lesson.slides || [],
-      order: lesson.order,
-      estimatedTime: lesson.estimatedTime || 15,
-      videoUrl: lesson.videoUrl || ''
+      order: lesson.order
     });
     setSlideInput('');
     setShowModal(true);
@@ -103,9 +117,7 @@ const AdminLessons = () => {
       title: '',
       content: '',
       slides: [],
-      order: '',
-      estimatedTime: 15,
-      videoUrl: ''
+      order: ''
     });
     setSlideInput('');
     setEditingLesson(null);
@@ -158,15 +170,15 @@ const AdminLessons = () => {
       {/* Topic Selector */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Chọn chủ đề
+          Chọn chủ đề (Lớp {selectedGrade})
         </label>
         <select
           value={selectedTopicId}
           onChange={(e) => setSelectedTopicId(e.target.value)}
-          className="w-full md:w-1/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+          className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
         >
           <option value="">-- Chọn chủ đề --</option>
-          {topics.map((topic) => (
+          {topics.filter(topic => topic.grade === selectedGrade).map((topic) => (
             <option key={topic._id} value={topic._id}>
               {topic.title}
             </option>
@@ -182,7 +194,7 @@ const AdminLessons = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">STT</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên bài học</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Slides</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Video</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Câu hỏi</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
             </tr>
           </thead>
@@ -199,10 +211,10 @@ const AdminLessons = () => {
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm">
-                  {lesson.videoUrl ? (
-                    <span className="text-blue-600">🎥 Video</span>
+                  {exerciseCounts[lesson._id] > 0 ? (
+                    <span className="text-purple-600 font-medium">❓ {exerciseCounts[lesson._id]} câu</span>
                   ) : (
-                    <span className="text-gray-400">-</span>
+                    <span className="text-gray-400">Chưa có</span>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -349,41 +361,16 @@ const AdminLessons = () => {
                   Nội dung text này sẽ hiển thị bên dưới slides (nếu có)
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Số thứ tự *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    value={formData.order}
-                    onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Thời gian ước tính (phút)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.estimatedTime}
-                    onChange={(e) => setFormData({ ...formData, estimatedTime: parseInt(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  URL Video YouTube (tùy chọn)
+                  Số thứ tự *
                 </label>
                 <input
-                  type="url"
-                  value={formData.videoUrl}
-                  onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                  type="number"
+                  required
+                  value={formData.order}
+                  onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  placeholder="https://www.youtube.com/watch?v=..."
                 />
               </div>
               <div className="flex space-x-4">

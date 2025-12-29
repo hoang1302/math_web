@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import api from '../../utils/api';
+import { useAdminGrade } from '../../context/AdminGradeContext';
 
 const AdminTopics = () => {
+  const { selectedGrade } = useAdminGrade();
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,7 +13,8 @@ const AdminTopics = () => {
     title: '',
     description: '',
     order: '',
-    icon: '📚'
+    icon: '📚',
+    grade: 1
   });
 
   useEffect(() => {
@@ -51,7 +54,8 @@ const AdminTopics = () => {
       title: topic.title,
       description: topic.description || '',
       order: topic.order,
-      icon: topic.icon || '📚'
+      icon: topic.icon || '📚',
+      grade: topic.grade || 5
     });
     setShowModal(true);
   };
@@ -68,14 +72,16 @@ const AdminTopics = () => {
   };
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', order: '', icon: '📚' });
+    setFormData({ title: '', description: '', order: '', icon: '📚', grade: selectedGrade });
     setEditingTopic(null);
   };
 
-  const filteredTopics = topics.filter(topic =>
-    topic.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    topic.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTopics = topics.filter(topic => {
+    const matchesSearch = topic.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      topic.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesGrade = topic.grade === selectedGrade;
+    return matchesSearch && matchesGrade;
+  });
 
   if (loading) {
     return (
@@ -99,7 +105,7 @@ const AdminTopics = () => {
           }}
           className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
         >
-          + Tạo chủ đề mới
+          + Tạo chủ đề mới (Lớp {selectedGrade})
         </button>
       </div>
 
@@ -122,6 +128,7 @@ const AdminTopics = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">STT</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Icon</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên chủ đề</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lớp</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mô tả</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
             </tr>
@@ -132,6 +139,11 @@ const AdminTopics = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{topic.order}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-2xl">{topic.icon || '📚'}</td>
                 <td className="px-6 py-4 text-sm font-medium text-gray-900">{topic.title}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                    Lớp {topic.grade || 5}
+                  </span>
+                </td>
                 <td className="px-6 py-4 text-sm text-gray-500">{topic.description || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <button
@@ -201,17 +213,31 @@ const AdminTopics = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 />
               </div>
+              {/* Show grade selector when editing, show as disabled when creating */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Icon
+                  Lớp *
                 </label>
-                <input
-                  type="text"
-                  value={formData.icon}
-                  onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  placeholder="📚"
-                />
+                {editingTopic ? (
+                  <select
+                    required
+                    value={formData.grade}
+                    onChange={(e) => setFormData({ ...formData, grade: parseInt(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value={1}>Lớp 1</option>
+                    <option value={2}>Lớp 2</option>
+                    <option value={3}>Lớp 3</option>
+                    <option value={4}>Lớp 4</option>
+                    <option value={5}>Lớp 5</option>
+                  </select>
+                ) : (
+                  <div className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                      Lớp {formData.grade}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="flex space-x-4">
                 <button

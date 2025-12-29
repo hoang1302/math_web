@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
 const Topics = () => {
+  const { selectedGrade } = useAuth();
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -48,11 +50,15 @@ const Topics = () => {
 
   useEffect(() => {
     fetchTopics();
-  }, []);
+  }, [selectedGrade]);
 
   const fetchTopics = async () => {
     try {
-      const response = await api.get('/topics');
+      const params = {};
+      if (selectedGrade) {
+        params.grade = selectedGrade;
+      }
+      const response = await api.get('/topics', { params });
       setTopics(response.data.data);
       setLoading(false);
     } catch (err) {

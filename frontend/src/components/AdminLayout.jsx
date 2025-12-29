@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { AdminGradeProvider, useAdminGrade } from '../context/AdminGradeContext';
 
-const AdminLayout = ({ children }) => {
+const AdminLayoutContent = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { selectedGrade, setSelectedGrade } = useAdminGrade();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Check if user is admin
@@ -53,6 +55,26 @@ const AdminLayout = ({ children }) => {
             >
               ✕
             </button>
+          </div>
+
+          {/* Grade Selector */}
+          <div className="p-4 border-b bg-gray-50">
+            <label className="block text-xs font-semibold text-gray-600 mb-2">CHỌN LỚP</label>
+            <div className="grid grid-cols-5 gap-1">
+              {[1, 2, 3, 4, 5].map((grade) => (
+                <button
+                  key={grade}
+                  onClick={() => setSelectedGrade(grade)}
+                  className={`py-2 px-1 text-sm font-semibold rounded-lg transition-all ${
+                    selectedGrade === grade
+                      ? 'bg-primary-600 text-white shadow-md'
+                      : 'bg-white text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {grade}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Menu */}
@@ -116,6 +138,9 @@ const AdminLayout = ({ children }) => {
               <span className="text-2xl">☰</span>
             </button>
             <div className="flex items-center space-x-4">
+              <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold">
+                Lớp {selectedGrade}
+              </span>
               <span className="text-sm text-gray-600">Admin Dashboard</span>
             </div>
           </div>
@@ -135,6 +160,14 @@ const AdminLayout = ({ children }) => {
         />
       )}
     </div>
+  );
+};
+
+const AdminLayout = ({ children }) => {
+  return (
+    <AdminGradeProvider>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </AdminGradeProvider>
   );
 };
 

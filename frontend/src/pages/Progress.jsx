@@ -72,7 +72,7 @@ const Progress = () => {
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-md p-6">
           <p className="text-gray-600 text-sm mb-1">Tổng số bài học</p>
           <p className="text-3xl font-bold text-primary-700">
@@ -90,19 +90,6 @@ const Progress = () => {
           <p className="text-3xl font-bold text-blue-600">
             {overview?.quizCount || 0}
           </p>
-        </div>
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <p className="text-gray-600 text-sm mb-1">Điểm trung bình</p>
-          <p className="text-3xl font-bold text-purple-600">
-            {overview?.averageScore || 0}
-          </p>
-        </div>
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <p className="text-gray-600 text-sm mb-1">Thời gian học</p>
-          <p className="text-3xl font-bold text-orange-600">
-            {overview?.totalStudyTime || 0}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">phút</p>
         </div>
       </div>
 

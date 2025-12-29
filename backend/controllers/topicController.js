@@ -6,14 +6,14 @@ import Lesson from '../models/Lesson.js';
 // @access  Private/Admin
 export const createTopic = async (req, res) => {
   try {
-    const { title, description, order, icon } = req.body;
+    const { title, description, order, icon, grade } = req.body;
 
-    // Check if order already exists
-    const existingTopic = await Topic.findOne({ order });
+    // Check if order already exists within the same grade (only active topics)
+    const existingTopic = await Topic.findOne({ order, grade: grade || 5, isActive: true });
     if (existingTopic) {
       return res.status(400).json({
         success: false,
-        message: `Topic with order ${order} already exists`
+        message: `Topic with order ${order} already exists in grade ${grade || 5}`
       });
     }
 
@@ -21,7 +21,8 @@ export const createTopic = async (req, res) => {
       title,
       description: description || '',
       order,
-      icon: icon || '📚'
+      icon: icon || '📚',
+      grade: grade || 5
     });
 
     res.status(201).json({
@@ -41,7 +42,7 @@ export const createTopic = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Topic order must be unique'
+        message: 'Topic order must be unique within the same grade'
       });
     }
 
@@ -58,7 +59,7 @@ export const createTopic = async (req, res) => {
 // @access  Private/Admin
 export const updateTopic = async (req, res) => {
   try {
-    const { title, description, order, icon } = req.body;
+    const { title, description, order, icon, grade } = req.body;
 
     const topic = await Topic.findById(req.params.id);
 
@@ -69,13 +70,21 @@ export const updateTopic = async (req, res) => {
       });
     }
 
-    // Check if order is being changed and if it conflicts
-    if (order !== undefined && order !== topic.order) {
-      const existingTopic = await Topic.findOne({ order, _id: { $ne: topic._id } });
+    // Check if order or grade is being changed and if it conflicts (only active topics)
+    const newGrade = grade !== undefined ? grade : topic.grade;
+    const newOrder = order !== undefined ? order : topic.order;
+    
+    if ((order !== undefined && order !== topic.order) || (grade !== undefined && grade !== topic.grade)) {
+      const existingTopic = await Topic.findOne({ 
+        order: newOrder, 
+        grade: newGrade,
+        isActive: true,
+        _id: { $ne: topic._id } 
+      });
       if (existingTopic) {
         return res.status(400).json({
           success: false,
-          message: `Topic with order ${order} already exists`
+          message: `Topic with order ${newOrder} already exists in grade ${newGrade}`
         });
       }
     }
@@ -85,6 +94,7 @@ export const updateTopic = async (req, res) => {
     if (description !== undefined) topic.description = description;
     if (order !== undefined) topic.order = order;
     if (icon !== undefined) topic.icon = icon;
+    if (grade !== undefined) topic.grade = grade;
 
     await topic.save();
 
@@ -112,7 +122,7 @@ export const updateTopic = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Topic order must be unique'
+        message: 'Topic order must be unique within the same grade'
       });
     }
 
@@ -176,7 +186,15 @@ export const deleteTopic = async (req, res) => {
 // @access  Public
 export const getTopics = async (req, res) => {
   try {
-    const topics = await Topic.find({ isActive: true })
+    const { grade } = req.query;
+    let query = { isActive: true };
+    
+    // Filter by grade if provided
+    if (grade) {
+      query.grade = parseInt(grade);
+    }
+    
+    const topics = await Topic.find(query)
       .sort({ order: 1 })
       .select('-__v');
 

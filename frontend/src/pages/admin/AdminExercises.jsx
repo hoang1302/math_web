@@ -401,7 +401,14 @@ const AdminExercises = () => {
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
             Câu hỏi luyện tập - {lesson?.title}
           </h1>
-          <p className="text-gray-600">Quản lý câu hỏi luyện tập cho bài học này</p>
+          <div className="flex items-center gap-3">
+            <p className="text-gray-600">Quản lý câu hỏi luyện tập cho bài học này</p>
+            {lesson?.topicId?.grade && (
+              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                Lớp {lesson.topicId.grade}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex space-x-3">
           <button

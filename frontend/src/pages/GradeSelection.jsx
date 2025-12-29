@@ -16,19 +16,14 @@ const GradeSelection = () => {
   }, [selectedGrade]);
 
   const grades = [
-    { number: 1, label: 'Lớp 1', available: false, icon: '📚', color: 'from-gray-400 to-gray-600' },
-    { number: 2, label: 'Lớp 2', available: false, icon: '📖', color: 'from-gray-400 to-gray-600' },
-    { number: 3, label: 'Lớp 3', available: false, icon: '📝', color: 'from-gray-400 to-gray-600' },
-    { number: 4, label: 'Lớp 4', available: false, icon: '📐', color: 'from-gray-400 to-gray-600' },
+    { number: 1, label: 'Lớp 1', available: true, icon: '📚', color: 'from-blue-400 to-blue-600' },
+    { number: 2, label: 'Lớp 2', available: true, icon: '📖', color: 'from-purple-400 to-purple-600' },
+    { number: 3, label: 'Lớp 3', available: true, icon: '📝', color: 'from-pink-400 to-pink-600' },
+    { number: 4, label: 'Lớp 4', available: true, icon: '📐', color: 'from-orange-400 to-orange-600' },
     { number: 5, label: 'Lớp 5', available: true, icon: '✨', color: 'from-green-400 to-green-600' },
   ];
 
   const handleSelectGrade = (grade) => {
-    if (!grade.available) {
-      alert(`Lớp ${grade.number} đang được phát triển. Vui lòng quay lại sau!`);
-      return;
-    }
-
     setLoading(true);
     setCurrentSelected(grade.number);
 

@@ -76,18 +76,18 @@ const Login = () => {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Email
+                Email hoặc Tên đăng nhập
               </label>
               <input
                 id="email"
                 name="email"
-                type="email"
-                autoComplete="email"
+                type="text"
+                autoComplete="username"
                 required
                 value={formData.email}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-lg"
-                placeholder="Nhập email của bạn"
+                placeholder="Nhập email hoặc tên đăng nhập"
               />
             </div>
 

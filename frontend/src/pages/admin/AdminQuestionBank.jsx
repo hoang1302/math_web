@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import api from '../../utils/api';
+import { useAdminGrade } from '../../context/AdminGradeContext';
 
 const AdminQuestionBank = () => {
+  const { selectedGrade } = useAdminGrade();
   const [exercises, setExercises] = useState([]);
   const [topics, setTopics] = useState([]);
   const [lessons, setLessons] = useState([]);
@@ -28,7 +30,6 @@ const AdminQuestionBank = () => {
   const [selectedTopic, setSelectedTopic] = useState('');
   const [selectedLesson, setSelectedLesson] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState('');
-  const [selectedType, setSelectedType] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
@@ -39,7 +40,7 @@ const AdminQuestionBank = () => {
 
   useEffect(() => {
     fetchExercises();
-  }, [selectedTopic, selectedLesson, selectedDifficulty, selectedType, debouncedSearchTerm]);
+  }, [selectedTopic, selectedLesson, selectedDifficulty, debouncedSearchTerm]);
 
   useEffect(() => {
     if (selectedTopic) {
@@ -49,6 +50,12 @@ const AdminQuestionBank = () => {
       setSelectedLesson('');
     }
   }, [selectedTopic]);
+
+  // Reset topic and lesson when grade changes from context
+  useEffect(() => {
+    setSelectedTopic('');
+    setSelectedLesson('');
+  }, [selectedGrade]);
 
   // Debounced search effect
   useEffect(() => {
@@ -85,7 +92,6 @@ const AdminQuestionBank = () => {
         ...(selectedTopic && { topicId: selectedTopic }),
         ...(selectedLesson && { lessonId: selectedLesson }),
         ...(selectedDifficulty && { difficulty: selectedDifficulty }),
-        ...(selectedType && { type: selectedType }),
         ...(debouncedSearchTerm && { search: debouncedSearchTerm })
       };
       
@@ -338,7 +344,7 @@ const AdminQuestionBank = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-md p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tìm kiếm
@@ -355,7 +361,7 @@ const AdminQuestionBank = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Chủ đề
+              Chủ đề (Lớp {selectedGrade})
             </label>
             <select
               value={selectedTopic}
@@ -366,7 +372,7 @@ const AdminQuestionBank = () => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             >
               <option value="">Tất cả chủ đề</option>
-              {topics.map((topic) => (
+              {topics.filter(t => t.grade === selectedGrade).map((topic) => (
                 <option key={topic._id} value={topic._id}>
                   {topic.title}
                 </option>
@@ -404,21 +410,6 @@ const AdminQuestionBank = () => {
               <option value="easy">Dễ</option>
               <option value="medium">Trung bình</option>
               <option value="hard">Khó</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Loại câu hỏi
-            </label>
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="">Tất cả loại</option>
-              <option value="multiple-choice">Trắc nghiệm</option>
-              <option value="fill-blank">Điền khuyết</option>
-              <option value="essay">Tự luận</option>
             </select>
           </div>
         </div>

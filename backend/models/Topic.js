@@ -11,10 +11,15 @@ const topicSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  grade: {
+    type: Number,
+    enum: [1, 2, 3, 4, 5],
+    required: [true, 'Grade is required'],
+    default: 5
+  },
   order: {
     type: Number,
-    required: [true, 'Topic order is required'],
-    unique: true
+    required: [true, 'Topic order is required']
   },
   icon: {
     type: String,
@@ -37,7 +42,15 @@ const topicSchema = new mongoose.Schema({
 });
 
 // Index for faster queries
-topicSchema.index({ order: 1 });
+topicSchema.index({ grade: 1 });
+// Compound unique index: order must be unique within each grade (only for active topics)
+topicSchema.index(
+  { grade: 1, order: 1 }, 
+  { 
+    unique: true,
+    partialFilterExpression: { isActive: true }
+  }
+);
 
 const Topic = mongoose.model('Topic', topicSchema);
 

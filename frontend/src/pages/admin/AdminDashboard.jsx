@@ -2,17 +2,20 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import api from '../../utils/api';
+import { useAdminGrade } from '../../context/AdminGradeContext';
 
 const AdminDashboard = () => {
+  const { selectedGrade } = useAdminGrade();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [selectedGrade]);
 
   const fetchStats = async () => {
     try {
+      setLoading(true);
       const [topicsRes, lessonsRes, exercisesRes, quizzesRes, usersRes] = await Promise.all([
         api.get('/topics'),
         api.get('/lessons'),
@@ -21,32 +24,49 @@ const AdminDashboard = () => {
         api.get('/users/stats')
       ]);
 
-      const topicsData = topicsRes.data.data || [];
-      const lessonsData = lessonsRes.data.data || [];
-      const exercisesData = exercisesRes.data.count || 0;
-      const quizzesData = quizzesRes.data.data || [];
+      const allTopics = topicsRes.data.data || [];
+      const allLessons = lessonsRes.data.data || [];
+      const allExercises = exercisesRes.data.data || [];
+      const allQuizzes = quizzesRes.data.data || [];
       const usersData = usersRes.data.data || {};
 
-      // Tính toán thống kê theo chủ đề
+      // Filter data by selected grade
+      const topicsData = allTopics.filter(t => t.grade === selectedGrade);
+      const topicIds = topicsData.map(t => t._id);
+      const lessonsData = allLessons.filter(l => {
+        const topicId = l.topicId?._id || l.topicId;
+        return topicIds.includes(topicId);
+      });
+      const lessonIds = lessonsData.map(l => l._id);
+      const exercisesData = Array.isArray(allExercises) 
+        ? allExercises.filter(e => {
+            const lessonId = e.lessonId?._id || e.lessonId;
+            return lessonIds.includes(lessonId);
+          })
+        : [];
+      const quizzesData = allQuizzes.filter(q => q.grade === selectedGrade);
+
+      // Tính toán thống kê theo chủ đề của lớp đã chọn
       const topicStats = topicsData.map(topic => {
-        const lessonsInTopic = lessonsData.filter(l => l.topicId?._id === topic._id || l.topicId === topic._id);
+        const lessonsInTopic = lessonsData.filter(l => {
+          const topicId = l.topicId?._id || l.topicId;
+          return topicId === topic._id;
+        });
         return {
           name: topic.title,
           lessons: lessonsInTopic.length,
-          exercises: 0 // Sẽ cần API riêng để lấy số câu hỏi theo topic
+          exercises: 0
         };
       });
 
       setStats({
         topics: topicsData.length,
         lessons: lessonsData.length,
-        exercises: exercisesData,
+        exercises: exercisesData.length,
         quizzes: quizzesData.length,
         users: usersData.totalUsers || 0,
         students: usersData.totalStudents || 0,
         admins: usersData.totalAdmins || 0,
-        activeUsers: usersData.activeUsers || 0,
-        completedUsers: usersData.completedUsers || 0,
         topicStats
       });
       setLoading(false);
@@ -109,13 +129,6 @@ const AdminDashboard = () => {
       link: '/admin/users?role=student'
     },
     { 
-      label: 'Người dùng hoạt động', 
-      value: stats?.activeUsers || 0, 
-      icon: '🔥', 
-      color: 'from-orange-500 to-red-500',
-      link: '/admin/users'
-    },
-    { 
       label: 'Chủ đề', 
       value: stats?.topics || 0, 
       icon: '📚', 
@@ -143,21 +156,19 @@ const AdminDashboard = () => {
       color: 'from-indigo-500 to-indigo-600',
       link: '/admin/quizzes'
     },
-    { 
-      label: 'Đã hoàn thành bài học', 
-      value: stats?.completedUsers || 0, 
-      icon: '✅', 
-      color: 'from-emerald-500 to-emerald-600',
-      link: '/admin/users'
-    },
   ];
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Admin Dashboard</h1>
-        <p className="text-gray-600">Tổng quan hệ thống và thống kê</p>
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+          <span className="px-4 py-2 bg-primary-600 text-white rounded-full text-lg font-semibold">
+            Lớp {selectedGrade}
+          </span>
+        </div>
+        <p className="text-gray-600">Tổng quan hệ thống và thống kê cho Lớp {selectedGrade}</p>
       </div>
 
       {/* Stats Cards Grid */}
@@ -196,56 +207,6 @@ const AdminDashboard = () => {
                 ))}
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Biểu đồ tròn - Phân bố người dùng */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">Phân bố người dùng</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={userDistributionData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {userDistributionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Biểu đồ tròn - Hoạt động người dùng */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">Hoạt động người dùng</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={userActivityData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {userActivityData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
           </ResponsiveContainer>
         </div>
 

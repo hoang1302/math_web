@@ -7,16 +7,23 @@ import Exercise from '../models/Exercise.js';
 // @access  Public
 export const getLessons = async (req, res) => {
   try {
-    const { topicId } = req.query;
+    const { topicId, grade } = req.query;
     
     let query = { isActive: true };
     
     if (topicId) {
       query.topicId = topicId;
     }
+    
+    // If grade is provided, first get topics for that grade
+    if (grade && !topicId) {
+      const topics = await Topic.find({ grade: parseInt(grade), isActive: true }).select('_id');
+      const topicIds = topics.map(t => t._id);
+      query.topicId = { $in: topicIds };
+    }
 
     const lessons = await Lesson.find(query)
-      .populate('topicId', 'title order')
+      .populate('topicId', 'title order grade')
       .sort({ order: 1 })
       .select('-__v');
 

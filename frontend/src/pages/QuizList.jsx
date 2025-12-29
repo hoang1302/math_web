@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
 const QuizList = () => {
+  const { selectedGrade } = useAuth();
   const [topics, setTopics] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [selectedTopicId, setSelectedTopicId] = useState('');
@@ -11,7 +13,7 @@ const QuizList = () => {
 
   useEffect(() => {
     fetchTopics();
-  }, []);
+  }, [selectedGrade]);
 
   useEffect(() => {
     if (selectedTopicId) {
@@ -23,7 +25,11 @@ const QuizList = () => {
 
   const fetchTopics = async () => {
     try {
-      const response = await api.get('/topics');
+      const params = {};
+      if (selectedGrade) {
+        params.grade = selectedGrade;
+      }
+      const response = await api.get('/topics', { params });
       setTopics(response.data.data);
       setLoading(false);
     } catch (err) {
@@ -35,8 +41,14 @@ const QuizList = () => {
   const fetchQuizzes = async (topicId = null) => {
     try {
       setLoading(true);
-      const url = topicId ? `/quizzes?topicId=${topicId}` : '/quizzes';
-      const response = await api.get(url);
+      const params = {};
+      if (topicId) {
+        params.topicId = topicId;
+      }
+      if (selectedGrade) {
+        params.grade = selectedGrade;
+      }
+      const response = await api.get('/quizzes', { params });
       setQuizzes(response.data.data);
       setLoading(false);
     } catch (err) {

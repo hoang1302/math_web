@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import api from '../../utils/api';
+import { useAdminGrade } from '../../context/AdminGradeContext';
 
 const AdminQuizzes = () => {
+  const { selectedGrade } = useAdminGrade();
   const [quizzes, setQuizzes] = useState([]);
   const [topics, setTopics] = useState([]);
   const [exercises, setExercises] = useState([]);
@@ -32,7 +34,8 @@ const AdminQuizzes = () => {
     description: '',
     timeLimit: 30,
     topics: [],
-    questions: []
+    questions: [],
+    grade: 1
   });
   const [questionFormData, setQuestionFormData] = useState({
     type: 'multiple-choice',
@@ -159,7 +162,8 @@ const AdminQuizzes = () => {
         description: formData.description,
         timeLimit: formData.timeLimit,
         topics: formData.topics,
-        questions: questionIds
+        questions: questionIds,
+        grade: formData.grade
       };
 
       if (editingQuiz) {
@@ -189,7 +193,8 @@ const AdminQuizzes = () => {
         description: fullQuiz.description || quiz.description || '',
         timeLimit: fullQuiz.timeLimit || quiz.timeLimit || 30,
         topics: fullQuiz.topics?.map(t => t._id || t) || quiz.topics?.map(t => t._id || t) || [],
-        questions: fullQuiz.questions?.map(q => q._id || q) || quiz.questions || []
+        questions: fullQuiz.questions?.map(q => q._id || q) || quiz.questions || [],
+        grade: fullQuiz.grade || quiz.grade || 5
       });
       
       // Fetch exercises to populate question details
@@ -219,7 +224,8 @@ const AdminQuizzes = () => {
         description: quiz.description || '',
         timeLimit: quiz.timeLimit || 30,
         topics: quiz.topics?.map(t => t._id || t) || [],
-        questions: quiz.questions || []
+        questions: quiz.questions || [],
+        grade: quiz.grade || 5
       });
     }
     
@@ -459,7 +465,8 @@ const AdminQuizzes = () => {
       description: '',
       timeLimit: 30,
       topics: [],
-      questions: []
+      questions: [],
+      grade: selectedGrade
     });
     setEditingQuiz(null);
   };
@@ -502,12 +509,14 @@ const AdminQuizzes = () => {
         </button>
       </div>
 
+
       {/* Quizzes List */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên bài thi</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lớp</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mô tả</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Số câu</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thời gian</th>
@@ -515,9 +524,14 @@ const AdminQuizzes = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {quizzes.map((quiz) => (
+            {quizzes.filter(quiz => quiz.grade === selectedGrade).map((quiz) => (
               <tr key={quiz._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 text-sm font-medium text-gray-900">{quiz.title}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                    Lớp {quiz.grade || 5}
+                  </span>
+                </td>
                 <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                   {quiz.description || '-'}
                 </td>
@@ -541,9 +555,9 @@ const AdminQuizzes = () => {
             ))}
           </tbody>
         </table>
-        {quizzes.length === 0 && (
+        {quizzes.filter(quiz => quiz.grade === selectedGrade).length === 0 && (
           <div className="text-center py-12 text-gray-500">
-            Chưa có bài thi nào. Hãy tạo bài thi đầu tiên!
+            Chưa có bài thi nào cho Lớp {selectedGrade}
           </div>
         )}
       </div>
@@ -595,22 +609,19 @@ const AdminQuizzes = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Chủ đề
+                    Lớp *
                   </label>
                   <select
-                    multiple
-                    value={formData.topics}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions, option => option.value);
-                      setFormData({ ...formData, topics: selected });
-                    }}
+                    required
+                    value={formData.grade}
+                    onChange={(e) => setFormData({ ...formData, grade: parseInt(e.target.value) })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                   >
-                    {topics.map((topic) => (
-                      <option key={topic._id} value={topic._id}>
-                        {topic.title}
-                      </option>
-                    ))}
+                    <option value={1}>Lớp 1</option>
+                    <option value={2}>Lớp 2</option>
+                    <option value={3}>Lớp 3</option>
+                    <option value={4}>Lớp 4</option>
+                    <option value={5}>Lớp 5</option>
                   </select>
                 </div>
               </div>
@@ -1004,7 +1015,19 @@ const AdminQuizzes = () => {
             <h2 className="text-2xl font-bold mb-4">Chọn câu hỏi từ ngân hàng</h2>
             
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Lớp
+                </label>
+                <select
+                  value={formData.grade}
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+                >
+                  <option value={formData.grade}>Lớp {formData.grade}</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Chủ đề
@@ -1018,7 +1041,7 @@ const AdminQuizzes = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="">Tất cả chủ đề</option>
-                  {bankTopics.map((topic) => (
+                  {bankTopics.filter(t => t.grade === formData.grade).map((topic) => (
                     <option key={topic._id} value={topic._id}>
                       {topic.title}
                     </option>
