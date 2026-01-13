@@ -17,6 +17,11 @@ if (!fs.existsSync(pdfsDir)) {
   fs.mkdirSync(pdfsDir, { recursive: true });
 }
 
+const imagesDir = path.join(uploadsDir, 'images');
+if (!fs.existsSync(imagesDir)) {
+  fs.mkdirSync(imagesDir, { recursive: true });
+}
+
 // Configure storage for PDFs
 const pdfStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -46,3 +51,32 @@ export const uploadPDF = multer({
   fileFilter: pdfFilter
 });
 
+// Configure storage for Images
+const imageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, imagesDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'question-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+// File filter for Images
+const imageFilter = (req, file, cb) => {
+  const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files (JPEG, PNG, GIF, WebP) are allowed'), false);
+  }
+};
+
+// Configure multer for Image upload
+export const uploadImage = multer({
+  storage: imageStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: imageFilter
+});

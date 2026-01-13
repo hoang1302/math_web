@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect, authorize } from '../middleware/auth.js';
-import { uploadPDF } from '../middleware/upload.js';
+import { uploadPDF, uploadImage } from '../middleware/upload.js';
 import Lesson from '../models/Lesson.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -58,7 +58,54 @@ router.post('/lesson/:lessonId/pdf', protect, authorize('admin'), uploadPDF.sing
 router.get('/pdfs/:filename', (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(__dirname, '../uploads/pdfs', filename);
-  
+
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      res.status(404).json({
+        success: false,
+        message: 'File not found'
+      });
+    }
+  });
+});
+
+// @desc    Upload image for question
+// @route   POST /api/upload/question-image
+// @access  Private/Admin
+router.post('/question-image', protect, authorize('admin'), uploadImage.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload an image file'
+      });
+    }
+
+    const imageUrl = `/uploads/images/${req.file.filename}`;
+
+    res.status(200).json({
+      success: true,
+      message: 'Image uploaded successfully',
+      data: {
+        imageUrl: imageUrl
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// @desc    Serve uploaded images
+// @route   GET /api/upload/images/:filename
+// @access  Public
+router.get('/images/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, '../uploads/images', filename);
+
   res.sendFile(filePath, (err) => {
     if (err) {
       res.status(404).json({

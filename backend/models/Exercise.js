@@ -8,12 +8,17 @@ const exerciseSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['multiple-choice', 'fill-blank', 'essay'],
+    enum: ['multiple-choice', 'fill-blank', 'essay', 'short-answer'],
     required: [true, 'Exercise type is required']
   },
   question: {
     type: String,
     required: [true, 'Question is required']
+  },
+  // Image for the question (optional)
+  questionImage: {
+    type: String,
+    default: ''
   },
   // For multiple-choice questions
   options: {

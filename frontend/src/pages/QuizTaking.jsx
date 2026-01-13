@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../utils/api';
+import api, { getBaseUrl } from '../utils/api';
 import MathRenderer from '../components/MathRenderer';
 
 const QuizTaking = () => {
@@ -27,7 +27,7 @@ const QuizTaking = () => {
     try {
       setSubmitting(true);
       const timeSpent = Math.floor((Date.now() - startTime) / 1000);
-      
+
       const answersArray = Object.entries(answers).map(([exerciseId, userAnswer]) => ({
         exerciseId,
         userAnswer,
@@ -149,9 +149,8 @@ const QuizTaking = () => {
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <div className={`text-2xl font-bold ${
-                timeLeft < 300 ? 'text-red-600' : 'text-gray-800'
-              }`}>
+              <div className={`text-2xl font-bold ${timeLeft < 300 ? 'text-red-600' : 'text-gray-800'
+                }`}>
                 ⏱️ {formatTime(timeLeft)}
               </div>
               <button
@@ -192,6 +191,25 @@ const QuizTaking = () => {
             <div className="text-lg">
               <MathRenderer content={currentQuestion.question} />
             </div>
+            {/* Question Image */}
+            {currentQuestion.questionImage && currentQuestion.questionImage.length > 0 && (
+              <div className="mt-4">
+                <img
+                  src={
+                    currentQuestion.questionImage.startsWith('http') || currentQuestion.questionImage.startsWith('blob:')
+                      ? currentQuestion.questionImage
+                      : `${getBaseUrl()}${currentQuestion.questionImage}`
+                  }
+                  alt="Hình ảnh câu hỏi"
+                  className="max-w-full h-auto max-h-96 rounded-lg border shadow-sm mx-auto"
+                  onError={(e) => {
+                    console.log('Image load error:', currentQuestion.questionImage);
+                    e.target.style.display = 'none';
+                  }}
+                  onLoad={() => console.log('Image loaded successfully:', currentQuestion.questionImage)}
+                />
+              </div>
+            )}
           </div>
 
           {/* Answer Input */}
@@ -201,11 +219,10 @@ const QuizTaking = () => {
                 {currentQuestion.options?.map((option, index) => (
                   <label
                     key={index}
-                    className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      answers[currentQuestion._id] === option
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-gray-200 hover:border-primary-300'
-                    }`}
+                    className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${answers[currentQuestion._id] === option
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-gray-200 hover:border-primary-300'
+                      }`}
                   >
                     <input
                       type="radio"
@@ -257,13 +274,12 @@ const QuizTaking = () => {
               <button
                 key={q._id}
                 onClick={() => setCurrentQuestionIndex(index)}
-                className={`p-3 rounded-lg font-semibold transition-colors ${
-                  index === currentQuestionIndex
-                    ? 'bg-primary-600 text-white'
-                    : answers[q._id]
+                className={`p-3 rounded-lg font-semibold transition-colors ${index === currentQuestionIndex
+                  ? 'bg-primary-600 text-white'
+                  : answers[q._id]
                     ? 'bg-green-100 text-green-700'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 {index + 1}
               </button>

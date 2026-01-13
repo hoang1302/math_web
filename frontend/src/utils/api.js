@@ -4,6 +4,11 @@ import axios from 'axios';
 // Expect VITE_API_URL to include the /api suffix.
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').trim();
 
+// Get base URL without /api suffix for static files
+export const getBaseUrl = () => {
+  return API_URL.replace('/api', '');
+};
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
