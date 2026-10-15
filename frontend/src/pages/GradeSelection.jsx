@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 
 const GradeSelection = () => {
   const navigate = useNavigate();
-  const { user, selectedGrade, setGrade } = useAuth();
+  const { selectedGrade, setGrade } = useAuth();
   const [currentSelected, setCurrentSelected] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -136,8 +136,8 @@ const GradeSelection = () => {
               {/* Top Border */}
               <div className={`
                 absolute top-0 left-0 right-0 h-2 rounded-t-3xl
-                ${grade.available 
-                  ? 'bg-gradient-to-r from-green-400 to-green-600' 
+                ${grade.available
+                  ? 'bg-gradient-to-r from-green-400 to-green-600'
                   : 'bg-gradient-to-r from-gray-400 to-gray-600'
                 }
               `} />
@@ -168,8 +168,8 @@ const GradeSelection = () => {
               <div className={`
                 text-7xl md:text-8xl font-extrabold mb-2
                 bg-clip-text text-transparent bg-gradient-to-br
-                ${grade.available 
-                  ? 'from-green-400 to-green-600' 
+                ${grade.available
+                  ? 'from-green-400 to-green-600'
                   : 'from-gray-400 to-gray-600'
                 }
               `}>

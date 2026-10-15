@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api from '../utils/api';
 
 const Settings = () => {
   const { logout } = useAuth();

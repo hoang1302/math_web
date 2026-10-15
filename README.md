@@ -1,136 +1,93 @@
-MathVui – Nền tảng học Toán lớp 5
-==================================
-By: Nguyễn Văn Hoàng
-    Nguyễn Công Anh Nguyên
-    Nguyễn Văn Nhật 
+# MathVui — Học Toán lớp 1–5
 
-### 🧮 Giới thiệu
+Nền tảng học Toán với bài học, luyện tập, quiz, tiến độ, huy hiệu và trang quản trị.
 
-**MathVui** là một nền tảng web giúp học sinh (đặc biệt là lớp 5) ôn luyện Toán thông qua:
-- **Bài học** (tài liệu/PDF) theo chủ đề
-- **Bài tập luyện tập** có chấm điểm
-- **Bài kiểm tra/quiz** theo chương
-- **Theo dõi tiến độ** học tập
-- **Huy hiệu / gamification** để tạo động lực
-- **Trang quản trị** cho giáo viên/quản trị viên quản lý nội dung và người dùng
+Tác giả: Nguyễn Văn Hoàng, Nguyễn Công Anh Nguyên, Nguyễn Văn Nhật.
 
----
+## Yêu cầu
 
-### 🏗 Kiến trúc hệ thống
+- Node.js >= 22.12 và npm >= 10.
+- MongoDB local hoặc MongoDB Atlas để chạy các tính năng có dữ liệu.
 
-- **Backend** (`backend/`)
-  - Node.js + Express
-  - MongoDB (qua Mongoose)
-  - Xác thực JWT, phân quyền cơ bản (user/admin)
-  - Quản lý: người dùng, chủ đề, bài học, bài tập, quiz, kết quả, huy hiệu, tiến độ
+## Cài đặt
 
-- **Frontend** (`frontend/`)
-  - React + Vite
-  - Tailwind CSS cho giao diện hiện đại
-  - React Router cho điều hướng nhiều trang (học sinh & admin)
-  - Hiển thị công thức toán với **KaTeX / react-katex**
-
----
-
-### ⚙️ Yêu cầu hệ thống
-
-- Node.js >= 18
-- npm >= 9
-- Tài khoản **MongoDB Atlas** (hoặc MongoDB cài local)
-
----
-
-### 🚀 Cài đặt & chạy nhanh (development)
-
-1. **Clone project**
+Clone repo và cài một lần tại thư mục gốc; npm workspaces quản lý cả frontend và backend.
 
 ```bash
-git clone <repo_url>
+git clone https://github.com/hoang1302/math_web.git
 cd math_web
+npm ci
 ```
 
-2. **Cài đặt backend**
+Sao chép `backend/env.example` thành `backend/.env` và đặt `MONGODB_URI`, `JWT_SECRET` riêng.
+Backend luôn đọc file này theo vị trí thư mục backend, kể cả khi khởi động từ thư mục gốc.
+Khi phát triển, nếu không đặt MongoDB URI, backend dùng `mongodb://127.0.0.1:27017/math_web_grade5`.
+Trong production, `MONGODB_URI` bắt buộc. Server chỉ lắng nghe sau khi kết nối MongoDB thành công.
+
+Chạy hai terminal từ thư mục gốc:
 
 ```bash
-cd backend
-npm install
-cp env.example .env   # Windows có thể copy thủ công
+npm run dev:backend
 ```
-
-Sau đó sửa file `.env`:
-- **MONGODB_URI**: connection string MongoDB
-- **JWT_SECRET**: chuỗi bí mật bất kỳ (dùng cho JWT)
-
-Khởi tạo dữ liệu mẫu & admin (tuỳ chọn, nếu có script):
 
 ```bash
-npm run seed
-npm run create-admin
+npm run dev:frontend
 ```
 
-Chạy server backend:
+Frontend: http://localhost:3000. Backend: http://localhost:5000.
+Vite chuyển tiếp `/api` và `/uploads` đến backend.
+
+## Cấu hình frontend và triển khai
+
+Development không cần file môi trường frontend. Khi frontend và backend khác domain,
+sao chép `frontend/env.example` thành `frontend/.env` rồi đặt:
+
+```dotenv
+VITE_API_URL=https://your-backend.example.com/api
+```
+
+Biến này được đưa vào lúc build. Build bằng `npm run build`, xuất bản `frontend/dist`.
+Production cùng domain cần reverse proxy cho `/api` và `/uploads`; Vite proxy chỉ hoạt động khi development.
+Nếu dùng tunnel khi phát triển, khai báo hostname cụ thể trong `VITE_ALLOWED_HOSTS`, phân cách bằng dấu phẩy.
+
+## Tạo admin
+
+Đặt `ADMIN_EMAIL`, `ADMIN_USERNAME` và `ADMIN_PASSWORD` (ít nhất 12 ký tự) trong `backend/.env`, rồi chạy:
 
 ```bash
-npm run dev
-# Mặc định: http://localhost:5000
+npm run create-admin --workspace backend
 ```
 
-3. **Cài đặt frontend**
+Script tạo tài khoản mới và báo lỗi nếu email hoặc username đã tồn tại.
+Không đặt lại mật khẩu hoặc ghi đè tài khoản đang có.
+
+## Kiểm tra
 
 ```bash
-cd ../frontend
-npm install
-npm run dev
+npm run lint
+npm test
+npm run build
+# Hoặc chạy cả ba:
+npm run check
 ```
 
-Frontend sẽ chạy với Vite, thường là `http://localhost:5173` (hoặc cổng Vite hiển thị trên terminal).
+Test tự động dùng Node.js test runner, không cần MongoDB.
+Các test controller thay thế thao tác model bằng stub; kiểm tra tích hợp với MongoDB thực cần chạy riêng.
+Xem `TESTING_GUIDE.md` cho các luồng kiểm tra thủ công và `CLEANUP_REPORT.md` cho phạm vi thay đổi.
 
----
+## Cấu trúc
 
-### 📁 Cấu trúc thư mục chính
+- `backend/app.js`: ứng dụng Express, routes và xử lý lỗi; có thể import để test.
+- `backend/server.js`: kiểm tra cấu hình, kết nối database và khởi động server.
+- `backend/controllers/`, `models/`, `routes/`, `middleware/`: API và dữ liệu.
+- `backend/utils/answers.js`: logic chấm đáp án dùng chung cho bài tập và quiz.
+- `frontend/src/App.jsx`: routes lồng nhau theo layout, tải trang khi cần.
+- `frontend/src/context/`: đăng nhập và lựa chọn lớp.
+- `frontend/src/utils/`: API, chuẩn hóa URL và lưu phiên đăng nhập.
+- `backend/tests/`, `frontend/tests/`: test hồi quy.
 
-- `backend/`
-  - `controllers/` – xử lý logic cho API (auth, bài học, bài tập, quiz, huy hiệu, tiến độ, người dùng,…)
-  - `models/` – định nghĩa schema MongoDB (User, Lesson, Topic, Exercise, Quiz, Badge,…)
-  - `routes/` – định nghĩa các endpoint API
-  - `middleware/` – middleware xác thực, upload file,…
-  - `scripts/` – script seed dữ liệu & tạo admin
-  - `server.js` – điểm vào của ứng dụng backend
+## Dữ liệu mẫu và migration
 
-- `frontend/`
-  - `src/pages/` – các trang như `Home`, `Dashboard`, `Practice`, `Exam`, `Lessons`, `Topics`, `Profile`, `admin/*`
-  - `src/components/` – layout, bảo vệ route, hiển thị slide/bài học, render công thức toán
-  - `src/context/` – `AuthContext` quản lý trạng thái đăng nhập
-  - `src/utils/api.js` – cấu hình axios & gọi API
-
----
-
-### 👤 Các luồng người dùng chính
-
-- **Học sinh**
-  - Đăng ký / đăng nhập
-  - Xem bài học theo chủ đề
-  - Làm bài tập, bài kiểm tra, xem điểm
-  - Xem tiến độ, huy hiệu đạt được
-
-- **Admin**
-  - Đăng nhập trang quản trị
-  - Quản lý chủ đề, bài học, bài tập, quiz
-  - Quản lý người dùng, xem tiến độ & kết quả
-
----
-
-### 🧩 Hướng phát triển tiếp theo (gợi ý)
-
-- Thêm ngân hàng câu hỏi phong phú hơn (nhiều dạng bài)
-- Thêm thống kê chi tiết hơn cho giáo viên/phụ huynh
-- Hỗ trợ nhiều khối lớp (không chỉ lớp 5)
-- Đa ngôn ngữ giao diện
-
----
-
-### 🤝 Đóng góp
-
-Pull Request / Issue rất hoan nghênh.  
-Nếu bạn muốn triển khai thực tế cho học sinh, có thể fork repo, tùy chỉnh nội dung bài học và giao diện cho phù hợp.
-
+Script `seed` hiện cần `noi_dung.md`, file chưa có trong repo. Script này xóa topics,
+lessons và exercises trước khi seed, vì vậy chỉ dùng với database phát triển đã sao lưu.
+Các script migration trong `backend/scripts` sửa dữ liệu; xem hướng dẫn trong thư mục trước khi chạy.

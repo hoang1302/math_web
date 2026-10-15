@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../utils/api';
 import { useAdminGrade } from '../../context/AdminGradeContext';
@@ -21,19 +21,7 @@ const AdminLessons = () => {
   });
   const [slideInput, setSlideInput] = useState('');
 
-  useEffect(() => {
-    fetchTopics();
-  }, []);
-
-  useEffect(() => {
-    if (selectedTopicId) {
-      fetchLessons(selectedTopicId);
-    } else {
-      setLessons([]);
-    }
-  }, [selectedTopicId]);
-
-  const fetchTopics = async () => {
+  const fetchTopics = useCallback(async () => {
     try {
       const response = await api.get('/topics');
       setTopics(response.data.data || []);
@@ -45,14 +33,14 @@ const AdminLessons = () => {
       console.error('Error fetching topics:', err);
       setLoading(false);
     }
-  };
+  }, [selectedTopicId]);
 
-  const fetchLessons = async (topicId) => {
+  const fetchLessons = useCallback(async (topicId) => {
     try {
       const response = await api.get(`/lessons?topicId=${topicId}`);
       const lessonsData = response.data.data || [];
       setLessons(lessonsData);
-      
+
       // Fetch exercise counts for each lesson
       const counts = {};
       await Promise.all(
@@ -69,7 +57,7 @@ const AdminLessons = () => {
     } catch (err) {
       console.error('Error fetching lessons:', err);
     }
-  };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -102,7 +90,7 @@ const AdminLessons = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Bạn có chắc muốn xóa bài học này?')) return;
-    
+
     try {
       await api.delete(`/lessons/${id}`);
       await fetchLessons(selectedTopicId);
@@ -139,6 +127,18 @@ const AdminLessons = () => {
       slides: formData.slides.filter((_, i) => i !== index)
     });
   };
+
+  useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics]);
+
+  useEffect(() => {
+    if (selectedTopicId) {
+      fetchLessons(selectedTopicId);
+    } else {
+      setLessons([]);
+    }
+  }, [fetchLessons, selectedTopicId]);
 
   if (loading) {
     return (

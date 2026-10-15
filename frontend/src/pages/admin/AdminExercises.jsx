@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 
@@ -37,24 +37,16 @@ const AdminExercises = () => {
     points: 1
   });
 
-  useEffect(() => {
-    if (lessonId) {
-      fetchLesson();
-      fetchExercises();
-      setFormData(prev => ({ ...prev, lessonId }));
-    }
-  }, [lessonId]);
-
-  const fetchLesson = async () => {
+  const fetchLesson = useCallback(async () => {
     try {
       const response = await api.get(`/lessons/${lessonId}`);
       setLesson(response.data.data);
     } catch (err) {
       console.error('Error fetching lesson:', err);
     }
-  };
+  }, [lessonId]);
 
-  const fetchExercises = async () => {
+  const fetchExercises = useCallback(async () => {
     try {
       const response = await api.get(`/exercises?lessonId=${lessonId}`);
       setExercises(response.data.data || []);
@@ -63,13 +55,13 @@ const AdminExercises = () => {
       console.error('Error fetching exercises:', err);
       setLoading(false);
     }
-  };
+  }, [lessonId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const submitData = { ...formData };
-      
+
       if (submitData.type === 'multiple-choice') {
         submitData.options = submitData.options.filter(opt => opt.trim() !== '');
         if (submitData.options.length < 2) {
@@ -85,7 +77,7 @@ const AdminExercises = () => {
       } else {
         await api.post('/exercises', submitData);
       }
-      
+
       await fetchExercises();
       setShowModal(false);
       resetForm();
@@ -98,7 +90,7 @@ const AdminExercises = () => {
     setEditingExercise(exercise);
     const options = exercise.options || ['', '', '', ''];
     while (options.length < 4) options.push('');
-    
+
     setFormData({
       lessonId: exercise.lessonId?._id || exercise.lessonId || lessonId,
       type: exercise.type,
@@ -114,7 +106,7 @@ const AdminExercises = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Bạn có chắc muốn xóa câu hỏi này?')) return;
-    
+
     try {
       await api.delete(`/exercises/${id}`);
       await fetchExercises();
@@ -132,7 +124,7 @@ const AdminExercises = () => {
   };
 
   const handleSelectExercise = (exerciseId) => {
-    setSelectedExercises(prev => 
+    setSelectedExercises(prev =>
       prev.includes(exerciseId)
         ? prev.filter(id => id !== exerciseId)
         : [...prev, exerciseId]
@@ -239,7 +231,7 @@ const AdminExercises = () => {
         params: { lessonId: lessonId, includeAnswers: 'true' }
       });
       const existingExercises = existingExercisesResponse.data.data || [];
-      
+
       // Create a set of existing question texts (normalized) for quick lookup
       const existingQuestionTexts = new Set(
         existingExercises.map(ex => ex.question.trim().toLowerCase())
@@ -247,11 +239,11 @@ const AdminExercises = () => {
 
       const createdIds = [];
       const skippedDuplicates = [];
-      
+
       for (const question of previewQuestions) {
         // Check if question already exists (case-insensitive comparison)
         const normalizedQuestion = question.question.trim().toLowerCase();
-        
+
         if (existingQuestionTexts.has(normalizedQuestion)) {
           skippedDuplicates.push(question.question.substring(0, 50) + '...');
           continue; // Skip duplicate
@@ -279,7 +271,7 @@ const AdminExercises = () => {
       setShowPreviewModal(false);
       setPreviewQuestions([]);
       setImportUrl('');
-      
+
       let message = `Đã import thành công ${createdIds.length} câu hỏi!`;
       if (skippedDuplicates.length > 0) {
         message += `\nĐã bỏ qua ${skippedDuplicates.length} câu hỏi trùng lặp.`;
@@ -310,18 +302,18 @@ const AdminExercises = () => {
     } catch (err) {
       console.error('Error generating AI questions:', err);
       console.error('Error response:', err.response?.data);
-      
+
       // Show detailed error message
-      const errorMessage = err.response?.data?.message 
-        || err.response?.data?.error 
-        || err.message 
+      const errorMessage = err.response?.data?.message
+        || err.response?.data?.error
+        || err.message
         || 'Có lỗi xảy ra khi tạo câu hỏi bằng AI';
-      
+
       // Show additional details in development
-      const errorDetails = err.response?.data?.details 
+      const errorDetails = err.response?.data?.details
         ? `\n\nChi tiết: ${JSON.stringify(err.response.data.details, null, 2)}`
         : '';
-      
+
       alert(`${errorMessage}${errorDetails}`);
     } finally {
       setAiLoading(false);
@@ -365,6 +357,14 @@ const AdminExercises = () => {
         : [...prev, index]
     );
   };
+
+  useEffect(() => {
+    if (lessonId) {
+      fetchLesson();
+      fetchExercises();
+      setFormData(prev => ({ ...prev, lessonId }));
+    }
+  }, [fetchExercises, fetchLesson, lessonId]);
 
   if (loading) {
     return (
@@ -514,7 +514,7 @@ const AdminExercises = () => {
                     <div className="truncate" dangerouslySetInnerHTML={{ __html: exercise.question }} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {exercise.type === 'multiple-choice' ? 'Trắc nghiệm' : 
+                    {exercise.type === 'multiple-choice' ? 'Trắc nghiệm' :
                      exercise.type === 'fill-blank' ? 'Điền khuyết' : 'Tự luận'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -523,7 +523,7 @@ const AdminExercises = () => {
                       exercise.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
                       'bg-red-100 text-red-700'
                     }`}>
-                      {exercise.difficulty === 'easy' ? 'Dễ' : 
+                      {exercise.difficulty === 'easy' ? 'Dễ' :
                        exercise.difficulty === 'medium' ? 'Trung bình' : 'Khó'}
                     </span>
                   </td>
@@ -778,7 +778,7 @@ const AdminExercises = () => {
                         question.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-red-100 text-red-700'
                       }`}>
-                        {question.difficulty === 'easy' ? 'Dễ' : 
+                        {question.difficulty === 'easy' ? 'Dễ' :
                          question.difficulty === 'medium' ? 'Trung bình' : 'Khó'}
                       </span>
                       <span className="text-xs text-gray-500">{question.points} điểm</span>
@@ -840,7 +840,7 @@ const AdminExercises = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">🤖 Tạo câu hỏi bằng AI</h2>
-            
+
             {aiGeneratedQuestions.length === 0 ? (
               <div className="space-y-4">
                 <div>
@@ -967,7 +967,7 @@ const AdminExercises = () => {
                               question.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
                               'bg-red-100 text-red-700'
                             }`}>
-                              {question.difficulty === 'easy' ? 'Dễ' : 
+                              {question.difficulty === 'easy' ? 'Dễ' :
                                question.difficulty === 'medium' ? 'Trung bình' : 'Khó'}
                             </span>
                             <span className="text-xs text-gray-500">
@@ -976,7 +976,7 @@ const AdminExercises = () => {
                             </span>
                           </div>
                           <p className="font-medium mb-3">{question.question}</p>
-                          
+
                           {question.type === 'multiple-choice' && question.options && (
                             <div className="space-y-2 mb-3">
                               {question.options.map((option, optIndex) => (
@@ -998,7 +998,7 @@ const AdminExercises = () => {
                               ))}
                             </div>
                           )}
-                          
+
                           {question.explanation && (
                             <div className="mt-3 p-2 bg-blue-50 rounded">
                               <p className="text-sm text-gray-700">

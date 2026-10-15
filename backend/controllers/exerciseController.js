@@ -1,3 +1,4 @@
+import { isAnswerCorrect } from '../utils/answers.js';
 import Exercise from '../models/Exercise.js';
 import Lesson from '../models/Lesson.js';
 
@@ -7,9 +8,9 @@ import Lesson from '../models/Lesson.js';
 export const getExercises = async (req, res) => {
   try {
     const { lessonId, difficulty, type, topicId, includeAnswers, search } = req.query;
-    
+
     let query = { isActive: true };
-    
+
     if (lessonId) {
       query.lessonId = lessonId;
     } else if (topicId) {
@@ -17,11 +18,11 @@ export const getExercises = async (req, res) => {
       const lessonIds = await Lesson.find({ topicId, isActive: true }).distinct('_id');
       query.lessonId = { $in: lessonIds };
     }
-    
+
     if (difficulty) {
       query.difficulty = difficulty;
     }
-    
+
     if (type) {
       query.type = type;
     }
@@ -72,13 +73,13 @@ export const getExercises = async (req, res) => {
 export const getRandomExercises = async (req, res) => {
   try {
     const { lessonId, difficulty, limit = 5 } = req.query;
-    
+
     let query = { isActive: true };
-    
+
     if (lessonId) {
       query.lessonId = lessonId;
     }
-    
+
     if (difficulty) {
       query.difficulty = difficulty;
     }
@@ -184,29 +185,7 @@ export const checkAnswer = async (req, res) => {
       });
     }
 
-    // Compare answers
-    let isCorrect = false;
-    const correctAnswer = exercise.correctAnswer;
-
-    // Handle different answer types
-    if (Array.isArray(correctAnswer)) {
-      // For multiple correct answers
-      isCorrect = Array.isArray(userAnswer) && 
-        correctAnswer.length === userAnswer.length &&
-        correctAnswer.every((ans, idx) => {
-          if (typeof ans === 'number') {
-            return parseFloat(userAnswer[idx]) === ans;
-          }
-          return String(ans).toLowerCase().trim() === String(userAnswer[idx]).toLowerCase().trim();
-        });
-    } else if (typeof correctAnswer === 'number') {
-      // For numeric answers, allow some tolerance
-      isCorrect = Math.abs(parseFloat(userAnswer) - correctAnswer) < 0.0001;
-    } else {
-      // For string answers, case-insensitive comparison
-      isCorrect = String(correctAnswer).toLowerCase().trim() === 
-                  String(userAnswer).toLowerCase().trim();
-    }
+    const isCorrect = isAnswerCorrect(exercise.correctAnswer, userAnswer);
 
     res.status(200).json({
       success: true,

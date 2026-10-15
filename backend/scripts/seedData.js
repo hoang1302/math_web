@@ -30,28 +30,28 @@ mongoose.connect(MONGODB_URI)
 function parseContentFile() {
   const filePath = path.join(__dirname, '../../noi_dung.md');
   const content = fs.readFileSync(filePath, 'utf-8');
-  
+
   const topics = [];
   let currentTopic = null;
   let currentLesson = null;
   const lines = content.split('\n');
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
+
     // Check for topic (starts with emoji and "Chủ đề")
-    if (line.match(/^[📚🌎📐].*Chủ đề \d+:/)) {
+    if (line.match(/^[📚🌎📐].*Chủ đề \d+:/u)) {
       // Save previous lesson if exists
       if (currentLesson && currentTopic) {
         currentTopic.lessons.push(currentLesson);
         currentLesson = null;
       }
-      
+
       // Save previous topic if exists
       if (currentTopic) {
         topics.push(currentTopic);
       }
-      
+
       // Extract topic number and title
       const match = line.match(/Chủ đề (\d+):\s*(.+)/);
       if (match) {
@@ -69,7 +69,7 @@ function parseContentFile() {
       if (currentLesson && currentTopic) {
         currentTopic.lessons.push(currentLesson);
       }
-      
+
       // Extract lesson number and title
       const match = line.match(/Bài (\d+):\s*(.+)/);
       if (match) {
@@ -90,7 +90,7 @@ function parseContentFile() {
         const contentLine = lines[i];
         // Stop if we hit a new lesson or topic
         const trimmedLine = contentLine.trim();
-        if (trimmedLine.match(/^Bài \d+:/) || trimmedLine.match(/^[📚🌎📐].*Chủ đề/)) {
+        if (trimmedLine.match(/^Bài \d+:/) || trimmedLine.match(/^[📚🌎📐].*Chủ đề/u)) {
           i--; // Go back one line
           break;
         }
@@ -115,7 +115,7 @@ function parseContentFile() {
       while (i < lines.length) {
         const exerciseLine = lines[i].trim();
         // Stop if we hit a new lesson or topic
-        if (exerciseLine.match(/^Bài \d+:/) || exerciseLine.match(/^[📚🌎📐].*Chủ đề/)) {
+        if (exerciseLine.match(/^Bài \d+:/) || exerciseLine.match(/^[📚🌎📐].*Chủ đề/u)) {
           i--; // Go back one line
           break;
         }
@@ -124,11 +124,11 @@ function parseContentFile() {
         }
         i++;
       }
-      
+
       // Parse exercises from content
       // Split by common patterns to create multiple exercises
       const exerciseText = exerciseContent.join('\n');
-      
+
       // Try to split exercises by common patterns
       const exercisePatterns = [
         /(?:^|\n)([A-Z][^:]+:)/g, // Lines starting with capital letter followed by colon
@@ -142,11 +142,10 @@ function parseContentFile() {
         /(?:^|\n)(Chuyển[^:]*:)/g, // "Chuyển..." patterns
         /(?:^|\n)(Làm tròn[^:]*:)/g // "Làm tròn..." patterns
       ];
-      
+
       // Split exercises by these patterns
       let exercises = [];
-      let lastIndex = 0;
-      
+
       // Find all exercise starts
       const exerciseStarts = [];
       for (const pattern of exercisePatterns) {
@@ -156,20 +155,20 @@ function parseContentFile() {
           exerciseStarts.push({ index: match.index, text: match[1] });
         }
       }
-      
+
       // Sort by index
       exerciseStarts.sort((a, b) => a.index - b.index);
-      
+
       // Extract exercises
       const fullExerciseText = exerciseContent.join('\n');
       if (exerciseStarts.length > 0) {
         for (let j = 0; j < exerciseStarts.length; j++) {
           const start = exerciseStarts[j];
-          const end = j < exerciseStarts.length - 1 
-            ? exerciseStarts[j + 1].index 
+          const end = j < exerciseStarts.length - 1
+            ? exerciseStarts[j + 1].index
             : fullExerciseText.length;
           const exerciseQuestion = fullExerciseText.substring(start.index, end).trim();
-          
+
           if (exerciseQuestion.length > 10) { // Minimum length
             exercises.push({
               type: determineExerciseType(exerciseQuestion),
@@ -181,7 +180,7 @@ function parseContentFile() {
           }
         }
       }
-      
+
       // If no exercises found, create one with all content
       if (exercises.length === 0 && exerciseContent.length > 0) {
         exercises.push({
@@ -192,11 +191,11 @@ function parseContentFile() {
           difficulty: 'medium'
         });
       }
-      
+
       currentLesson.exercises = exercises;
     }
   }
-  
+
   // Save last lesson and topic
   if (currentLesson && currentTopic) {
     currentTopic.lessons.push(currentLesson);
@@ -204,7 +203,7 @@ function parseContentFile() {
   if (currentTopic) {
     topics.push(currentTopic);
   }
-  
+
   return topics;
 }
 
@@ -213,12 +212,12 @@ async function seedData() {
   try {
     console.log('📖 Parsing noi_dung.md...');
     const topicsData = parseContentFile();
-    
+
     console.log(`Found ${topicsData.length} topics`);
-    
+
     // Clear existing data (optional - comment out if you want to keep existing data)
     console.log('🗑️  Clearing existing data...');
-    
+
     // Drop problematic indexes if they exist
     try {
       const topicCollection = mongoose.connection.collection('topics');
@@ -233,15 +232,15 @@ async function seedData() {
       // Ignore errors when dropping indexes
       console.log('  ℹ️  No problematic indexes to drop');
     }
-    
+
     await Topic.deleteMany({});
     await Lesson.deleteMany({});
     await Exercise.deleteMany({});
-    
+
     // Seed topics and lessons
     for (const topicData of topicsData) {
       console.log(`\n📚 Creating topic: ${topicData.title} (Order: ${topicData.order})`);
-      
+
       // Create topic
       const topic = await Topic.create({
         title: topicData.title,
@@ -249,24 +248,24 @@ async function seedData() {
         order: topicData.order,
         icon: getTopicIcon(topicData.order)
       });
-      
+
       console.log(`  ✅ Topic created: ${topic._id}`);
-      
+
       // Create lessons for this topic
       for (const lessonData of topicData.lessons) {
         console.log(`  📖 Creating lesson: ${lessonData.title} (Order: ${lessonData.order})`);
-        
+
         // Check if content exists
-        const lessonContent = lessonData.content && lessonData.content.trim() 
-          ? lessonData.content.trim() 
+        const lessonContent = lessonData.content && lessonData.content.trim()
+          ? lessonData.content.trim()
           : 'Nội dung bài học sẽ được cập nhật.';
-        
+
         if (!lessonData.content || !lessonData.content.trim()) {
           console.warn(`    ⚠️  Warning: Lesson "${lessonData.title}" has no content`);
         } else {
           console.log(`    📄 Content length: ${lessonData.content.length} characters`);
         }
-        
+
         const lesson = await Lesson.create({
           topicId: topic._id,
           title: lessonData.title,
@@ -274,9 +273,9 @@ async function seedData() {
           order: lessonData.order,
           estimatedTime: 15
         });
-        
+
         console.log(`    ✅ Lesson created: ${lesson._id}`);
-        
+
         // Create exercises for this lesson
         // For now, create a simple exercise from practice content
         if (lessonData.exercises && lessonData.exercises.length > 0) {
@@ -308,7 +307,7 @@ async function seedData() {
         }
       }
     }
-    
+
     console.log('\n✅ Seeding completed successfully!');
     console.log(`\n📊 Summary:`);
     const topicCount = await Topic.countDocuments();
@@ -317,7 +316,7 @@ async function seedData() {
     console.log(`  - Topics: ${topicCount}`);
     console.log(`  - Lessons: ${lessonCount}`);
     console.log(`  - Exercises: ${exerciseCount}`);
-    
+
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding data:', error);
@@ -328,7 +327,7 @@ async function seedData() {
 // Helper function to determine exercise type from question text
 function determineExerciseType(questionText) {
   const text = questionText.toLowerCase();
-  
+
   if (text.includes('chọn') || text.includes('đáp án đúng') || text.includes('?')) {
     return 'multiple-choice';
   } else if (text.includes('điền') || text.includes('ô trống') || text.includes('?') && text.includes('=')) {

@@ -2,7 +2,6 @@ import Badge from '../models/Badge.js';
 import UserBadge from '../models/UserBadge.js';
 import UserProgress from '../models/UserProgress.js';
 import QuizResult from '../models/QuizResult.js';
-import Exercise from '../models/Exercise.js';
 
 // @desc    Get all badges
 // @route   GET /api/badges
@@ -37,7 +36,6 @@ export const getUserBadges = async (req, res) => {
 
     // Get all badges to show which ones are not earned
     const allBadges = await Badge.find({ isActive: true });
-    const earnedBadgeIds = new Set(userBadges.map(ub => ub.badgeId._id.toString()));
 
     const badgesWithStatus = allBadges.map(badge => {
       const userBadge = userBadges.find(ub => ub.badgeId._id.toString() === badge._id.toString());
@@ -71,7 +69,7 @@ export const checkAndAwardBadges = async (userId) => {
 
     // Get all active badges
     const badges = await Badge.find({ isActive: true });
-    
+
     // Get user's existing badges
     const existingUserBadges = await UserBadge.find({ userId });
     const existingBadgeIds = new Set(existingUserBadges.map(ub => ub.badgeId.toString()));
@@ -88,7 +86,7 @@ export const checkAndAwardBadges = async (userId) => {
 
       // Check different badge conditions
       switch (condition.type) {
-        case 'exercises_completed':
+        case 'exercises_completed': {
           const completedExercises = await UserProgress.countDocuments({
             userId,
             completed: true
@@ -98,18 +96,19 @@ export const checkAndAwardBadges = async (userId) => {
             metadata = { exercisesCompleted: completedExercises };
           }
           break;
+        }
 
-        case 'quiz_score':
+        case 'quiz_score': {
           const quizResults = await QuizResult.find({ userId });
           if (condition.timeLimit) {
             // Check for quiz completed within time limit with high score
-            const qualifyingQuizzes = quizResults.filter(qr => 
-              qr.percentage >= condition.value && 
+            const qualifyingQuizzes = quizResults.filter(qr =>
+              qr.percentage >= condition.value &&
               qr.timeSpent <= condition.timeLimit * 60
             );
             if (qualifyingQuizzes.length > 0) {
               shouldAward = true;
-              metadata = { 
+              metadata = {
                 quizCount: qualifyingQuizzes.length,
                 bestScore: Math.max(...qualifyingQuizzes.map(q => q.percentage))
               };
@@ -119,15 +118,16 @@ export const checkAndAwardBadges = async (userId) => {
             const highScoreQuizzes = quizResults.filter(qr => qr.percentage >= condition.value);
             if (highScoreQuizzes.length > 0) {
               shouldAward = true;
-              metadata = { 
+              metadata = {
                 quizCount: highScoreQuizzes.length,
                 bestScore: Math.max(...highScoreQuizzes.map(q => q.percentage))
               };
             }
           }
           break;
+        }
 
-        case 'lessons_completed':
+        case 'lessons_completed': {
           const completedLessons = await UserProgress.countDocuments({
             userId,
             completed: true
@@ -137,17 +137,18 @@ export const checkAndAwardBadges = async (userId) => {
             metadata = { lessonsCompleted: completedLessons };
           }
           break;
+        }
 
-        case 'streak':
+        case 'streak': {
           // Check for consecutive days of activity
           // This is a simplified version - you might want to track daily activity
           const recentProgress = await UserProgress.find({ userId })
             .sort({ lastAttemptAt: -1 })
             .limit(condition.value);
-          
+
           if (recentProgress.length >= condition.value) {
             // Check if they're consecutive days
-            const dates = recentProgress.map(p => 
+            const dates = recentProgress.map(p =>
               new Date(p.lastAttemptAt).toDateString()
             );
             const uniqueDates = new Set(dates);
@@ -157,6 +158,7 @@ export const checkAndAwardBadges = async (userId) => {
             }
           }
           break;
+        }
 
         default:
           break;
@@ -204,7 +206,7 @@ export const checkBadges = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: result.count > 0 
+      message: result.count > 0
         ? `Earned ${result.count} new badge(s)!`
         : 'No new badges earned',
       newlyEarned: result.newlyEarned,

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
-import { PieChart, Pie, Cell, RadialBarChart, RadialBar, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Progress = () => {
-  const [progress, setProgress] = useState([]);
+  const [, setProgress] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -62,7 +62,11 @@ const Progress = () => {
     );
   }
 
-  const { overview, topicProgress, completedLessonsList, completedQuizzesList } = stats;
+  const {
+  overview,
+  completedLessonsList,
+  completedQuizzesList
+} = stats;
 
   return (
     <div>

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../utils/api';
 import { useAdminGrade } from '../../context/AdminGradeContext';
 
@@ -9,11 +9,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchStats();
-  }, [selectedGrade]);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
       const [topicsRes, lessonsRes, exercisesRes, quizzesRes, usersRes] = await Promise.all([
@@ -38,7 +34,7 @@ const AdminDashboard = () => {
         return topicIds.includes(topicId);
       });
       const lessonIds = lessonsData.map(l => l._id);
-      const exercisesData = Array.isArray(allExercises) 
+      const exercisesData = Array.isArray(allExercises)
         ? allExercises.filter(e => {
             const lessonId = e.lessonId?._id || e.lessonId;
             return lessonIds.includes(lessonId);
@@ -74,7 +70,11 @@ const AdminDashboard = () => {
       console.error('Error fetching stats:', err);
       setLoading(false);
     }
-  };
+  }, [selectedGrade]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats, selectedGrade]);
 
   if (loading) {
     return (
@@ -94,16 +94,8 @@ const AdminDashboard = () => {
   ];
 
   // Dữ liệu cho biểu đồ tròn - Phân bố người dùng
-  const userDistributionData = [
-    { name: 'Học sinh', value: stats?.students || 0, color: '#4FACFE' },
-    { name: 'Admin', value: stats?.admins || 0, color: '#FF9800' },
-  ];
 
   // Dữ liệu cho biểu đồ tròn - Hoạt động người dùng
-  const userActivityData = [
-    { name: 'Đã hoạt động', value: stats?.activeUsers || 0, color: '#00C853' },
-    { name: 'Chưa hoạt động', value: (stats?.users || 0) - (stats?.activeUsers || 0), color: '#E0E0E0' },
-  ];
 
   // Dữ liệu cho biểu đồ cột - Bài học theo chủ đề
   const topicLessonsData = (stats?.topicStats || []).map(item => ({
@@ -111,48 +103,46 @@ const AdminDashboard = () => {
     'Số bài học': item.lessons
   }));
 
-  const COLORS = ['#4FACFE', '#00C853', '#9C27B0', '#FF9800', '#F44336', '#00BCD4'];
-
   const statCards = [
-    { 
-      label: 'Tổng người dùng', 
-      value: stats?.users || 0, 
-      icon: '👥', 
+    {
+      label: 'Tổng người dùng',
+      value: stats?.users || 0,
+      icon: '👥',
       color: 'from-blue-500 to-blue-600',
       link: '/admin/users'
     },
-    { 
-      label: 'Học sinh', 
-      value: stats?.students || 0, 
-      icon: '🎓', 
+    {
+      label: 'Học sinh',
+      value: stats?.students || 0,
+      icon: '🎓',
       color: 'from-green-500 to-green-600',
       link: '/admin/users?role=student'
     },
-    { 
-      label: 'Chủ đề', 
-      value: stats?.topics || 0, 
-      icon: '📚', 
+    {
+      label: 'Chủ đề',
+      value: stats?.topics || 0,
+      icon: '📚',
       color: 'from-purple-500 to-purple-600',
       link: '/admin/topics'
     },
-    { 
-      label: 'Bài học', 
-      value: stats?.lessons || 0, 
-      icon: '📖', 
+    {
+      label: 'Bài học',
+      value: stats?.lessons || 0,
+      icon: '📖',
       color: 'from-teal-500 to-teal-600',
       link: '/admin/lessons'
     },
-    { 
-      label: 'Câu hỏi', 
-      value: stats?.exercises || 0, 
-      icon: '❓', 
+    {
+      label: 'Câu hỏi',
+      value: stats?.exercises || 0,
+      icon: '❓',
       color: 'from-pink-500 to-pink-600',
       link: '/admin/exercises'
     },
-    { 
-      label: 'Quiz', 
-      value: stats?.quizzes || 0, 
-      icon: '📝', 
+    {
+      label: 'Quiz',
+      value: stats?.quizzes || 0,
+      icon: '📝',
       color: 'from-indigo-500 to-indigo-600',
       link: '/admin/quizzes'
     },

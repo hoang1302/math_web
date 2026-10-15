@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 
 const Lessons = () => {
   const [searchParams] = useSearchParams();
   const topicId = searchParams.get('topicId');
-  
+
   const [topics, setTopics] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
@@ -51,24 +51,12 @@ const Lessons = () => {
     return '📚';
   };
 
-  useEffect(() => {
-    fetchTopics();
-  }, []);
-
-  useEffect(() => {
-    if (topicId) {
-      fetchLessons(topicId);
-    } else if (topics.length > 0) {
-      fetchLessons(topics[0]._id);
-    }
-  }, [topicId, topics]);
-
-  const fetchTopics = async () => {
+  const fetchTopics = useCallback(async () => {
     try {
       const response = await api.get('/topics');
       const topicsData = response.data.data;
       setTopics(topicsData);
-      
+
       if (topicId) {
         const topic = topicsData.find(t => t._id === topicId);
         setSelectedTopic(topic || topicsData[0]);
@@ -79,27 +67,39 @@ const Lessons = () => {
       setError('Không thể tải danh sách chủ đề');
       setLoading(false);
     }
-  };
+  }, [topicId]);
 
-  const fetchLessons = async (id) => {
+  const fetchLessons = useCallback(async (id) => {
     try {
       setLoading(true);
       const response = await api.get(`/lessons?topicId=${id}`);
       setLessons(response.data.data);
-      
+
       const topic = topics.find(t => t._id === id);
       if (topic) setSelectedTopic(topic);
-      
+
       setLoading(false);
     } catch (err) {
       setError('Không thể tải danh sách bài học');
       setLoading(false);
     }
-  };
+  }, [topics]);
 
   const handleTopicChange = (topicId) => {
     fetchLessons(topicId);
   };
+
+  useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics]);
+
+  useEffect(() => {
+    if (topicId) {
+      fetchLessons(topicId);
+    } else if (topics.length > 0) {
+      fetchLessons(topics[0]._id);
+    }
+  }, [fetchLessons, topicId, topics]);
 
   if (loading && lessons.length === 0) {
     return (
@@ -157,7 +157,7 @@ const Lessons = () => {
         )}
 
         <div className="space-y-4">
-          {lessons.map((lesson, index) => (
+          {lessons.map((lesson, _index) => (
             <Link
               key={lesson._id}
               to={`/lessons/${lesson._id}`}

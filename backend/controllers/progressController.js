@@ -2,7 +2,7 @@ import UserProgress from '../models/UserProgress.js';
 import Lesson from '../models/Lesson.js';
 import Topic from '../models/Topic.js';
 import QuizResult from '../models/QuizResult.js';
-import Quiz from '../models/Quiz.js';
+
 import UserBadge from '../models/UserBadge.js';
 import User from '../models/User.js';
 import { checkAndAwardBadges } from './badgeController.js';
@@ -220,8 +220,8 @@ export const getUserStats = async (req, res) => {
     // Get all lessons count
     const totalLessons = await Lesson.countDocuments({ isActive: true });
     const completedLessons = allProgress.filter(p => p.completed).length;
-    const completionPercentage = totalLessons > 0 
-      ? Math.round((completedLessons / totalLessons) * 100) 
+    const completionPercentage = totalLessons > 0
+      ? Math.round((completedLessons / totalLessons) * 100)
       : 0;
 
     // Calculate average score
@@ -242,12 +242,12 @@ export const getUserStats = async (req, res) => {
       console.error('Error fetching quiz results:', quizErr);
       quizResults = [];
     }
-    
+
     const quizCount = quizResults.length;
     const quizAverageScore = quizResults.length > 0
       ? Math.round(quizResults.reduce((sum, q) => sum + (q.percentage || 0), 0) / quizResults.length)
       : 0;
-    
+
     // Get completed lessons with topic info
     const completedProgress = allProgress.filter(p => {
       // Filter out null/undefined lessonId and ensure completed is true
@@ -258,14 +258,14 @@ export const getUserStats = async (req, res) => {
         return false;
       }
     });
-    
+
     const completedLessonsList = completedProgress
       .map(p => {
         try {
           // Handle both populated and non-populated topicId
           let topicId = null;
           let topicTitle = null;
-          
+
           if (p.lessonId && p.lessonId.topicId) {
             if (typeof p.lessonId.topicId === 'object' && p.lessonId.topicId._id) {
               // Populated topicId
@@ -276,7 +276,7 @@ export const getUserStats = async (req, res) => {
               topicId = p.lessonId.topicId;
             }
           }
-          
+
           return {
             lessonId: p.lessonId?._id || p.lessonId,
             title: p.lessonId?.title || 'Unknown Lesson',
@@ -303,7 +303,7 @@ export const getUserStats = async (req, res) => {
           return 0;
         }
       });
-    
+
     // Get completed quizzes list
     const completedQuizzesList = quizResults
       .filter(qr => qr.quizId && qr.quizId._id) // Filter out null quizId
@@ -333,7 +333,7 @@ export const getUserStats = async (req, res) => {
           } else {
             topicId = p.lessonId.topicId.toString();
           }
-          
+
           if (!topicProgressMap.has(topicId)) {
             topicProgressMap.set(topicId, { completed: 0, total: 0 });
           }
@@ -375,7 +375,7 @@ export const getUserStats = async (req, res) => {
         .populate('badgeId', 'name icon description')
         .sort({ earnedAt: -1 })
         .limit(5);
-      
+
       recentBadges = badges
         .filter(ub => ub.badgeId && ub.badgeId._id) // Filter out null badgeId
         .map(ub => ({

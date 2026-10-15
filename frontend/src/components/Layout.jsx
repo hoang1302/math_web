@@ -3,7 +3,11 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Layout = ({ children }) => {
-  const { user, isAuthenticated, logout, selectedGrade } = useAuth();
+  const {
+  user,
+  isAuthenticated,
+  logout
+} = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -40,8 +44,6 @@ const Layout = ({ children }) => {
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
-
-  const isHome = location.pathname === '/';
 
   return (
     <div className="min-h-screen bg-page bg-home">

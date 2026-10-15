@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../../utils/api';
 
 const AdminUsers = () => {
@@ -21,11 +21,7 @@ const AdminUsers = () => {
     }
   });
 
-  useEffect(() => {
-    fetchUsers();
-  }, [currentPage, searchTerm, roleFilter]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -34,7 +30,7 @@ const AdminUsers = () => {
         ...(searchTerm && { search: searchTerm }),
         ...(roleFilter && { role: roleFilter })
       };
-      
+
       const response = await api.get('/users', { params });
       setUsers(response.data.data || []);
       setTotalPages(response.data.pages || 1);
@@ -44,7 +40,7 @@ const AdminUsers = () => {
       console.error('Error fetching users:', err);
       setLoading(false);
     }
-  };
+  }, [currentPage, roleFilter, searchTerm]);
 
   const handleEdit = (user) => {
     setEditingUser(user);
@@ -74,7 +70,7 @@ const AdminUsers = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Bạn có chắc muốn xóa người dùng này? Tất cả dữ liệu liên quan sẽ bị xóa.')) return;
-    
+
     try {
       await api.delete(`/users/${id}`);
       await fetchUsers();
@@ -97,10 +93,14 @@ const AdminUsers = () => {
   };
 
   const getRoleBadge = (role) => {
-    return role === 'admin' 
+    return role === 'admin'
       ? <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">Admin</span>
       : <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Học sinh</span>;
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [currentPage, searchTerm, roleFilter, fetchUsers]);
 
   if (loading && users.length === 0) {
     return (
