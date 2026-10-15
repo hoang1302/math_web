@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import api from '../utils/api';
 import MathRenderer from '../components/MathRenderer';
 
 const Practice = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+
   const exerciseId = searchParams.get('exerciseId');
 
   const [topics, setTopics] = useState([]);
@@ -66,7 +66,7 @@ const Practice = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    
+
     if (name === 'topicId' && value) {
       fetchLessons(value);
     }
@@ -78,11 +78,11 @@ const Practice = () => {
       const params = {
         limit: parseInt(formData.limit),
       };
-      
+
       if (formData.lessonId) {
         params.lessonId = formData.lessonId;
       }
-      
+
       if (formData.difficulty) {
         params.difficulty = formData.difficulty;
       }

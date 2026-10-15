@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api from '../utils/api';
 
 const Profile = () => {
   const { user, getCurrentUser } = useAuth();

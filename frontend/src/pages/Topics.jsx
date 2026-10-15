@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -48,11 +48,7 @@ const Topics = () => {
     return '📚';
   };
 
-  useEffect(() => {
-    fetchTopics();
-  }, [selectedGrade]);
-
-  const fetchTopics = async () => {
+  const fetchTopics = useCallback(async () => {
     try {
       const params = {};
       if (selectedGrade) {
@@ -65,7 +61,11 @@ const Topics = () => {
       setError('Không thể tải danh sách chủ đề');
       setLoading(false);
     }
-  };
+  }, [selectedGrade]);
+
+  useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics, selectedGrade]);
 
   if (loading) {
     return (

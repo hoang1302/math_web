@@ -8,56 +8,33 @@ const QuizResults = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [result, setResult] = useState(location.state?.result || null);
-  const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(!result);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!result) {
-      fetchResult();
-    } else {
-      fetchQuizDetails();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (result) {
-      fetchQuizDetails();
-    }
-  }, [result]);
-
-  const fetchResult = async () => {
-    try {
-      const response = await api.get(`/quizzes/${id}/results`);
-      if (response.data.data && response.data.data.length > 0) {
-        setResult(response.data.data[0]);
-        fetchQuizDetails();
+    const controller = new AbortController();
+    const loadResult = async () => {
+      setLoading(true);
+      setQuestions([]);
+      try {
+        const submitted = location.state?.result;
+        const quizResult = submitted || (await api.get('/quizzes/' + id + '/results', {
+          signal: controller.signal,
+        })).data.data?.[0];
+        if (controller.signal.aborted) return;
+        setResult(quizResult || null);
+        if (!quizResult) return;
+        const response = await api.get('/quizzes/' + id, { signal: controller.signal });
+        if (!controller.signal.aborted) setQuestions(response.data.data.questions || []);
+      } catch (error) {
+        if (!controller.signal.aborted) console.error('Error fetching quiz results:', error);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching result:', err);
-      setLoading(false);
-    }
-  };
-
-  const fetchQuizDetails = async () => {
-    try {
-      const response = await api.get(`/quizzes/${id}`);
-      setQuiz(response.data.data);
-      
-      // Fetch question details
-      if (response.data.data.questions) {
-        const questionPromises = response.data.data.questions.map(qId => {
-          const id = typeof qId === 'string' ? qId : qId?._id;
-          return api.get(`/exercises/${id}?includeAnswers=true`);
-        });
-        const questionResponses = await Promise.all(questionPromises);
-        setQuestions(questionResponses.map(res => res.data.data));
-      }
-    } catch (err) {
-      console.error('Error fetching quiz details:', err);
-    }
-  };
+    };
+    loadResult();
+    return () => controller.abort();
+  }, [id, location.state]);
 
   if (loading) {
     return (
@@ -81,7 +58,6 @@ const QuizResults = () => {
 
   const percentage = result.percentage || 0;
   const isPassed = percentage >= 50;
-  const wrongAnswers = result.answers?.filter(a => !a.isCorrect) || [];
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -119,11 +95,11 @@ const QuizResults = () => {
         <h2 className="text-xl font-semibold mb-4">📋 Chi tiết từng câu - Đáp án</h2>
         <div className="space-y-6">
           {result.answers?.map((answer, index) => {
-            const question = questions[index];
-            const isWrong = !answer.isCorrect;
-            const correctAnswer = answer.correctAnswer ?? questions[index]?.correctAnswer;
-            const explanation = answer.explanation ?? questions[index]?.explanation;
-            
+            const question = questions.find(item => item._id === answer.exerciseId);
+
+            const correctAnswer = answer.correctAnswer ?? question?.correctAnswer;
+            const explanation = answer.explanation ?? question?.explanation;
+
             return (
               <div
                 key={index}
@@ -139,7 +115,7 @@ const QuizResults = () => {
                     <span className="font-semibold text-lg">Câu {index + 1}</span>
                   </div>
                   <span className="text-sm text-gray-600">
-                    {answer.points || 1} điểm
+                    {answer.points ?? 0} điểm
                   </span>
                 </div>
 
@@ -157,16 +133,16 @@ const QuizResults = () => {
                 <div className="space-y-2 mb-4">
                   <div className="p-3 bg-white rounded-lg">
                     <p className="text-sm text-gray-600 mb-1">Đáp án của bạn:</p>
-                    <p className="font-medium text-lg">
-                      <MathRenderer content={String(answer.userAnswer)} />
-                    </p>
+                    <div className="font-medium text-lg">
+                      <MathRenderer content={String(answer.userAnswer ?? '').trim() || 'Chưa trả lời'} />
+                    </div>
                   </div>
-                  
+
                   <div className="p-3 bg-green-100 rounded-lg border-2 border-green-300">
                     <p className="text-sm text-green-700 mb-1 font-medium">Đáp án đúng:</p>
-                    <p className="font-bold text-lg text-green-800">
-                      <MathRenderer content={String(correctAnswer || 'N/A')} />
-                    </p>
+                    <div className="font-bold text-lg text-green-800">
+                      <MathRenderer content={String(correctAnswer ?? 'N/A')} />
+                    </div>
                   </div>
                 </div>
 

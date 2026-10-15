@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -11,19 +11,7 @@ const QuizList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchTopics();
-  }, [selectedGrade]);
-
-  useEffect(() => {
-    if (selectedTopicId) {
-      fetchQuizzes(selectedTopicId);
-    } else {
-      fetchQuizzes();
-    }
-  }, [selectedTopicId]);
-
-  const fetchTopics = async () => {
+  const fetchTopics = useCallback(async () => {
     try {
       const params = {};
       if (selectedGrade) {
@@ -36,9 +24,9 @@ const QuizList = () => {
       setError('Không thể tải danh sách chủ đề');
       setLoading(false);
     }
-  };
+  }, [selectedGrade]);
 
-  const fetchQuizzes = async (topicId = null) => {
+  const fetchQuizzes = useCallback(async (topicId = null) => {
     try {
       setLoading(true);
       const params = {};
@@ -55,7 +43,19 @@ const QuizList = () => {
       setError('Không thể tải danh sách quiz');
       setLoading(false);
     }
-  };
+  }, [selectedGrade]);
+
+  useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics, selectedGrade]);
+
+  useEffect(() => {
+    if (selectedTopicId) {
+      fetchQuizzes(selectedTopicId);
+    } else {
+      fetchQuizzes();
+    }
+  }, [fetchQuizzes, selectedTopicId]);
 
   if (loading) {
     return (

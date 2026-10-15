@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
 
@@ -9,46 +9,45 @@ const Exam = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchTopics();
-    fetchQuizzes();
-  }, []);
-
-  useEffect(() => {
-    fetchQuizzes();
-  }, [selectedTopic]);
-
-  const fetchTopics = async () => {
+  const fetchTopics = useCallback(async () => {
     try {
       const response = await api.get('/topics');
       setTopics(response.data.data);
     } catch (err) {
       console.error('Error fetching topics:', err);
     }
-  };
+  }, []);
 
-  const fetchQuizzes = async () => {
+  const fetchQuizzes = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get('/quizzes');
       let quizzesData = response.data.data;
-      
+
       // Filter by topic if selected
       if (selectedTopic) {
-        quizzesData = quizzesData.filter(quiz => 
-          quiz.topics && quiz.topics.some(topic => 
+        quizzesData = quizzesData.filter(quiz =>
+          quiz.topics && quiz.topics.some(topic =>
             (typeof topic === 'object' ? topic._id : topic) === selectedTopic
           )
         );
       }
-      
+
       setQuizzes(quizzesData);
       setLoading(false);
     } catch (err) {
       setError('Không thể tải danh sách bài thi');
       setLoading(false);
     }
-  };
+  }, [selectedTopic]);
+
+  useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics]);
+
+  useEffect(() => {
+    fetchQuizzes();
+  }, [fetchQuizzes, selectedTopic]);
 
   if (loading) {
     return (
@@ -163,8 +162,8 @@ const Exam = () => {
       {quizzes.length === 0 && (
         <div className="text-center py-12 bg-white rounded-xl shadow-md">
           <p className="text-gray-600">
-            {selectedTopic 
-              ? 'Chưa có bài thi nào cho chủ đề này' 
+            {selectedTopic
+              ? 'Chưa có bài thi nào cho chủ đề này'
               : 'Chưa có bài thi nào'}
           </p>
         </div>

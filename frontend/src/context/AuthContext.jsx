@@ -1,144 +1,74 @@
 import { createContext, useState, useEffect, useContext } from 'react';
 import api from '../utils/api';
+import { clearSession, normalizeGrade, readSession, saveSession, SESSION_EXPIRED_EVENT } from '../utils/session';
 
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [selectedGrade, setSelectedGrade] = useState(null);
+  const [session, setSession] = useState(() => readSession(localStorage));
+  const { user, grade: selectedGrade } = session;
 
-  // Check if user is logged in on mount
+  const logout = () => {
+    clearSession(localStorage);
+    setSession({ user: null, grade: null });
+  };
+
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    const savedGrade = localStorage.getItem('selectedGrade');
-    
-    if (token && savedUser) {
-      try {
-        const userData = JSON.parse(savedUser);
-        setUser(userData);
-        setIsAuthenticated(true);
-        
-        // Lấy grade từ user profile hoặc localStorage
-        const grade = userData.profile?.grade || (savedGrade ? parseInt(savedGrade) : null);
-        if (grade) {
-          setSelectedGrade(grade);
-          localStorage.setItem('selectedGrade', grade.toString());
-        }
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('selectedGrade');
-      }
-    }
-    setLoading(false);
+    const handleSessionExpired = () => setSession({ user: null, grade: null });
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
   }, []);
 
-  // Login function
-  const login = async (email, password) => {
+  const authenticate = async (path, credentials, fallbackMessage) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post(path, credentials);
       const { token, user: userData } = response.data;
-      
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-      setIsAuthenticated(true);
-      
+      const grade = saveSession(localStorage, token, userData);
+      setSession({ user: userData, grade });
       return { success: true, data: userData };
     } catch (error) {
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Đăng nhập thất bại',
-      };
+      return { success: false, message: error.response?.data?.message || fallbackMessage };
     }
   };
 
-  // Register function
-  const register = async (email, password, username, fullName) => {
-    try {
-      const response = await api.post('/auth/register', {
-        email,
-        password,
-        username,
-        fullName,
-      });
-      const { token, user: userData } = response.data;
-      
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-      setIsAuthenticated(true);
-      
-      return { success: true, data: userData };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Đăng ký thất bại',
-      };
-    }
-  };
+  const login = (email, password) => authenticate('/auth/login', { email, password }, 'Đăng nhập thất bại');
+  const register = (email, password, username, fullName) => authenticate(
+    '/auth/register', { email, password, username, fullName }, 'Đăng ký thất bại'
+  );
 
-  // Logout function
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    setIsAuthenticated(false);
-  };
-
-  // Get current user
   const getCurrentUser = async () => {
     try {
       const response = await api.get('/auth/me');
       const userData = response.data.user;
-      setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
-      
-      // Cập nhật selectedGrade nếu có trong profile
-      if (userData.profile?.grade) {
-        setSelectedGrade(userData.profile.grade);
-        localStorage.setItem('selectedGrade', userData.profile.grade.toString());
-      }
-      
+      const grade = normalizeGrade(userData.profile?.grade);
+      if (grade) localStorage.setItem('selectedGrade', String(grade));
+      setSession(previous => ({ user: userData, grade: grade ?? previous.grade }));
       return { success: true, data: userData };
     } catch (error) {
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Không thể lấy thông tin user',
-      };
+      return { success: false, message: error.response?.data?.message || 'Không thể lấy thông tin user' };
     }
   };
 
-  // Set selected grade
-  const setGrade = (grade) => {
-    setSelectedGrade(grade);
-    localStorage.setItem('selectedGrade', grade.toString());
+  const setGrade = (value) => {
+    const grade = normalizeGrade(value);
+    if (!grade) return;
+    localStorage.setItem('selectedGrade', String(grade));
+    setSession(previous => ({ ...previous, grade }));
   };
 
-  const value = {
-    user,
-    loading,
-    isAuthenticated,
-    selectedGrade,
-    login,
-    register,
-    logout,
-    getCurrentUser,
-    setGrade,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{
+      user, loading: false, isAuthenticated: Boolean(user), selectedGrade,
+      login, register, logout, getCurrentUser, setGrade,
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
-

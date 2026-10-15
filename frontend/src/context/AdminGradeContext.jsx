@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { normalizeGrade } from '../utils/session';
 
 const AdminGradeContext = createContext();
 
@@ -13,7 +14,7 @@ export const useAdminGrade = () => {
 export const AdminGradeProvider = ({ children }) => {
   const [selectedGrade, setSelectedGrade] = useState(() => {
     const saved = localStorage.getItem('adminSelectedGrade');
-    return saved ? parseInt(saved) : 1;
+    return normalizeGrade(saved) ?? 1;
   });
 
   useEffect(() => {

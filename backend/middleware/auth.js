@@ -61,3 +61,8 @@ export const authorize = (...roles) => {
   };
 };
 
+// Answer keys are visible only to authenticated administrators.
+export const requireAdminForAnswers = (req, res, next) => {
+  if (req.query.includeAnswers !== 'true') return next();
+  return protect(req, res, () => authorize('admin')(req, res, next));
+};

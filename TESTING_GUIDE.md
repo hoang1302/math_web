@@ -1,5 +1,9 @@
 # Testing Guide - Multi-Grade Support (Lớp 1-5)
 
+Chạy `npm run check` từ thư mục gốc để lint, test hồi quy và build. Các test tự động không cần database.
+
+Các bước bên dưới dùng database phát triển riêng. Migration sửa dữ liệu và chỉ cần chạy khi dữ liệu cũ thiếu grade; sao lưu trước khi chạy.
+
 ## Chuẩn bị
 
 ### 1. Chạy Migration Script
@@ -36,7 +40,7 @@ npm run dev
 **Mục tiêu:** Kiểm tra tất cả lớp đều có thể chọn được
 
 **Các bước:**
-1. Truy cập `/grade-selection`
+1. Truy cập `/select-grade`
 2. Kiểm tra 5 card lớp (1-5) đều hiển thị
 3. Kiểm tra không có badge "🔒 Sắp ra mắt"
 4. Click vào từng lớp → Không có alert "đang được phát triển"
@@ -58,7 +62,7 @@ npm run dev
 1. Đăng nhập với user bất kỳ
 2. Chọn Lớp 1 từ Grade Selection
 3. Vào trang Topics → Chỉ thấy topics của Lớp 1
-4. Quay lại `/grade-selection`, chọn Lớp 5
+4. Quay lại `/select-grade`, chọn Lớp 5
 5. Vào trang Topics → Chỉ thấy topics của Lớp 5
 
 **Kết quả mong đợi:**

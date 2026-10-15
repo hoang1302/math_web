@@ -60,19 +60,8 @@ function Home() {
   const totalLessons = overview?.totalLessons || 13;
 
   // Get time-based greeting
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Chào buổi sáng';
-    if (hour < 18) return 'Chào buổi chiều';
-    return 'Chào buổi tối';
-  };
 
   // Mock data for leaderboard
-  const leaderboard = [
-    { rank: 1, name: 'Minh', points: 850, medal: '🥇' },
-    { rank: 2, name: 'Hoa', points: 720, medal: '🥈' },
-    { rank: 3, name: user?.username || 'Bạn', points: 650, medal: '🥉' },
-  ];
 
   return (
     <div className="relative min-h-screen pb-8 overflow-hidden">

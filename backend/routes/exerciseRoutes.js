@@ -8,14 +8,14 @@ import {
   updateExercise,
   deleteExercise
 } from '../controllers/exerciseController.js';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect, authorize, requireAdminForAnswers } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Public routes
-router.get('/', getExercises);
+router.get('/', requireAdminForAnswers, getExercises);
 router.get('/random', getRandomExercises);
-router.get('/:id', getExercise);
+router.get('/:id', requireAdminForAnswers, getExercise);
 router.post('/check', checkAnswer);
 
 // Admin routes

@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api, { getBaseUrl } from '../../utils/api';
 import { useAdminGrade } from '../../context/AdminGradeContext';
 
 const AdminQuizzes = () => {
   const { selectedGrade } = useAdminGrade();
   const [quizzes, setQuizzes] = useState([]);
-  const [topics, setTopics] = useState([]);
+  const [, setTopics] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -51,13 +51,7 @@ const AdminQuizzes = () => {
     questionImageFile: null
   });
 
-  useEffect(() => {
-    fetchQuizzes();
-    fetchTopics();
-    fetchAllExercises();
-  }, []);
-
-  const fetchQuizzes = async () => {
+  const fetchQuizzes = useCallback(async () => {
     try {
       const response = await api.get('/quizzes');
       setQuizzes(response.data.data || []);
@@ -66,27 +60,27 @@ const AdminQuizzes = () => {
       console.error('Error fetching quizzes:', err);
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchTopics = async () => {
+  const fetchTopics = useCallback(async () => {
     try {
       const response = await api.get('/topics');
       setTopics(response.data.data || []);
     } catch (err) {
       console.error('Error fetching topics:', err);
     }
-  };
+  }, []);
 
-  const fetchAllExercises = async () => {
+  const fetchAllExercises = useCallback(async () => {
     try {
       const response = await api.get('/exercises');
       setExercises(response.data.data || []);
     } catch (err) {
       console.error('Error fetching exercises:', err);
     }
-  };
+  }, []);
 
-  const fetchBankExercises = async () => {
+  const fetchBankExercises = useCallback(async () => {
     try {
       setBankLoading(true);
       const params = {
@@ -104,49 +98,25 @@ const AdminQuizzes = () => {
       console.error('Error fetching bank exercises:', err);
       setBankLoading(false);
     }
-  };
+  }, [selectedBankDifficulty, selectedBankLesson, selectedBankTopic, selectedBankType]);
 
-  const fetchBankTopics = async () => {
+  const fetchBankTopics = useCallback(async () => {
     try {
       const response = await api.get('/topics');
       setBankTopics(response.data.data || []);
     } catch (err) {
       console.error('Error fetching topics:', err);
     }
-  };
+  }, []);
 
-  const fetchBankLessons = async (topicId) => {
+  const fetchBankLessons = useCallback(async (topicId) => {
     try {
       const response = await api.get(`/lessons?topicId=${topicId}`);
       setBankLessons(response.data.data || []);
     } catch (err) {
       console.error('Error fetching lessons:', err);
     }
-  };
-
-  useEffect(() => {
-    if (showQuestionBankModal) {
-      fetchBankTopics();
-      fetchBankExercises();
-    }
-  }, [showQuestionBankModal]);
-
-  useEffect(() => {
-    if (showQuestionBankModal) {
-      fetchBankExercises();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBankTopic, selectedBankLesson, selectedBankDifficulty, selectedBankType]);
-
-  useEffect(() => {
-    if (showQuestionBankModal && selectedBankTopic) {
-      fetchBankLessons(selectedBankTopic);
-    } else if (showQuestionBankModal && !selectedBankTopic) {
-      setBankLessons([]);
-      setSelectedBankLesson('');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBankTopic, showQuestionBankModal]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -584,6 +554,33 @@ const AdminQuizzes = () => {
     }
   };
 
+  useEffect(() => {
+    fetchQuizzes();
+    fetchTopics();
+    fetchAllExercises();
+  }, [fetchAllExercises, fetchQuizzes, fetchTopics]);
+
+  useEffect(() => {
+    if (showQuestionBankModal) {
+      fetchBankTopics();
+    }
+  }, [fetchBankTopics, showQuestionBankModal]);
+
+  useEffect(() => {
+    if (showQuestionBankModal) {
+      fetchBankExercises();
+    }
+  }, [selectedBankTopic, selectedBankLesson, selectedBankDifficulty, selectedBankType, showQuestionBankModal, fetchBankExercises]);
+
+  useEffect(() => {
+    if (showQuestionBankModal && selectedBankTopic) {
+      fetchBankLessons(selectedBankTopic);
+    } else if (showQuestionBankModal && !selectedBankTopic) {
+      setBankLessons([]);
+      setSelectedBankLesson('');
+    }
+  }, [fetchBankLessons, selectedBankTopic, showQuestionBankModal]);
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -609,7 +606,6 @@ const AdminQuizzes = () => {
           + Tạo bài thi mới
         </button>
       </div>
-
 
       {/* Quizzes List */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">

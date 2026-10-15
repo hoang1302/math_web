@@ -1,3 +1,4 @@
+import { gradeQuiz } from '../utils/answers.js';
 import Quiz from '../models/Quiz.js';
 import Exercise from '../models/Exercise.js';
 import QuizResult from '../models/QuizResult.js';
@@ -15,7 +16,7 @@ export const getQuizzes = async (req, res) => {
     if (topicId) {
       query.topics = topicId;
     }
-    
+
     // Filter by grade if provided
     if (grade) {
       query.grade = parseInt(grade);
@@ -138,7 +139,10 @@ export const submitQuiz = async (req, res) => {
       });
     }
 
-    const quiz = await Quiz.findById(req.params.id).populate('questions');
+    const quiz = await Quiz.findById(req.params.id).populate({
+      path: 'questions',
+      populate: { path: 'lessonId', select: 'topicId' }
+    });
 
     if (!quiz || !quiz.isActive) {
       return res.status(404).json({
@@ -147,99 +151,28 @@ export const submitQuiz = async (req, res) => {
       });
     }
 
-    // Get all exercises with correct answers
-    const exerciseIds = quiz.questions.map(q => q._id);
-    const exercises = await Exercise.find({ _id: { $in: exerciseIds } });
-
-    // Create exercise map for quick lookup
-    const exerciseMap = new Map();
-    exercises.forEach(ex => {
-      exerciseMap.set(ex._id.toString(), ex);
-    });
-
-    // Check answers and calculate score
-    let totalScore = 0;
-    let correctCount = 0;
-    let wrongCount = 0;
-    const checkedAnswers = [];
-    const topicStatsMap = new Map();
-
-    for (const answer of answers) {
-      const exercise = exerciseMap.get(answer.exerciseId);
-      if (!exercise) continue;
-
-      let isCorrect = false;
-      const correctAnswer = exercise.correctAnswer;
-
-      // Compare answers (similar logic to checkAnswer)
-      if (Array.isArray(correctAnswer)) {
-        isCorrect = Array.isArray(answer.userAnswer) && 
-          correctAnswer.length === answer.userAnswer.length &&
-          correctAnswer.every((ans, idx) => {
-            if (typeof ans === 'number') {
-              return parseFloat(answer.userAnswer[idx]) === ans;
-            }
-            return String(ans).toLowerCase().trim() === String(answer.userAnswer[idx]).toLowerCase().trim();
-          });
-      } else if (typeof correctAnswer === 'number') {
-        isCorrect = Math.abs(parseFloat(answer.userAnswer) - correctAnswer) < 0.0001;
-      } else {
-        isCorrect = String(correctAnswer).toLowerCase().trim() === 
-                    String(answer.userAnswer).toLowerCase().trim();
-      }
-
-      const points = isCorrect ? exercise.points : 0;
-      totalScore += points;
-
-      if (isCorrect) {
-        correctCount++;
-      } else {
-        wrongCount++;
-      }
-
-      checkedAnswers.push({
-        exerciseId: exercise._id,
-        userAnswer: answer.userAnswer,
-        isCorrect,
-        points,
-        correctAnswer: exercise.correctAnswer,
-        explanation: exercise.explanation || ''
-      });
-
-      // Track topic stats (if lesson has topicId)
-      if (exercise.lessonId) {
-        const lesson = await Exercise.populate(exercise, { path: 'lessonId', select: 'topicId' });
-        if (lesson.lessonId && lesson.lessonId.topicId) {
-          const topicId = lesson.lessonId.topicId.toString();
-          if (!topicStatsMap.has(topicId)) {
-            topicStatsMap.set(topicId, { correct: 0, total: 0 });
-          }
-          const stats = topicStatsMap.get(topicId);
-          stats.total++;
-          if (isCorrect) stats.correct++;
-        }
-      }
+    if (timeSpent !== undefined && (typeof timeSpent !== 'number' || !Number.isFinite(timeSpent) || timeSpent < 0)) {
+      return res.status(400).json({ success: false, message: 'timeSpent must be a non-negative number' });
     }
 
-    const percentage = quiz.totalPoints > 0 ? Math.round((totalScore / quiz.totalPoints) * 100) : 0;
+    const questions = quiz.questions.filter(Boolean);
+    const graded = gradeQuiz(questions, answers);
+    const topicStatsMap = new Map();
+    questions.forEach((question, index) => {
+      const topicId = question.lessonId?.topicId?.toString();
+      if (!topicId) return;
+      const stats = topicStatsMap.get(topicId) || { correct: 0, total: 0 };
+      stats.total++;
+      if (graded.answers[index].isCorrect) stats.correct++;
+      topicStatsMap.set(topicId, stats);
+    });
 
-    // Create quiz result
     const quizResult = await QuizResult.create({
       userId: req.user.id,
       quizId: quiz._id,
-      score: totalScore,
-      totalScore: quiz.totalPoints,
-      percentage,
-      totalQuestions: quiz.questions.length,
-      correctAnswers: correctCount,
-      wrongAnswers: wrongCount,
-      timeSpent: timeSpent || 0,
-      answers: checkedAnswers,
-      topicStats: Array.from(topicStatsMap.entries()).map(([topicId, stats]) => ({
-        topicId,
-        correct: stats.correct,
-        total: stats.total
-      }))
+      ...graded,
+      timeSpent: timeSpent ?? 0,
+      topicStats: Array.from(topicStatsMap, ([topicId, stats]) => ({ topicId, ...stats }))
     });
 
     // Check and award badges after quiz completion
@@ -253,6 +186,9 @@ export const submitQuiz = async (req, res) => {
       newlyEarnedBadges: newlyEarnedBadges.length > 0 ? newlyEarnedBadges : undefined
     });
   } catch (error) {
+    if (error.status === 400) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     if (error.name === 'CastError') {
       return res.status(404).json({
         success: false,
@@ -344,7 +280,6 @@ export const createQuiz = async (req, res) => {
     });
   }
 };
-
 
 // @desc    Update quiz
 // @route   PUT /api/quizzes/:id

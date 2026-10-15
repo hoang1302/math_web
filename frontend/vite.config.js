@@ -1,23 +1,18 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react';
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    host: true,
-    port: 3000,
-    allowedHosts: [
-      'chalazian-subtilely-rowena.ngrok-free.dev', // ngrok share link (example)
-      /\.ngrok-free\.app$/, // allow other ngrok-free.app hosts
-      /\.ngrok-free\.dev$/, // allow other ngrok-free.dev hosts
-    ],
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-      }
-    }
-  }
-})
-
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_');
+  return {
+    plugins: [react()],
+    server: {
+      host: true,
+      port: 3000,
+      allowedHosts: (env.VITE_ALLOWED_HOSTS || '').split(',').map(host => host.trim()).filter(Boolean),
+      proxy: {
+        '/api': { target: 'http://127.0.0.1:5000', changeOrigin: true },
+        '/uploads': { target: 'http://127.0.0.1:5000', changeOrigin: true },
+      },
+    },
+  };
+});

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../../utils/api';
 import { useAdminGrade } from '../../context/AdminGradeContext';
 
@@ -25,7 +25,7 @@ const AdminQuestionBank = () => {
     difficulty: 'medium',
     points: 1
   });
-  
+
   // Filters
   const [selectedTopic, setSelectedTopic] = useState('');
   const [selectedLesson, setSelectedLesson] = useState('');
@@ -33,58 +33,29 @@ const AdminQuestionBank = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetchTopics();
-    fetchExercises();
-  }, []);
-
-  useEffect(() => {
-    fetchExercises();
-  }, [selectedTopic, selectedLesson, selectedDifficulty, debouncedSearchTerm]);
-
-  useEffect(() => {
-    if (selectedTopic) {
-      fetchLessons(selectedTopic);
-    } else {
-      setLessons([]);
-      setSelectedLesson('');
-    }
-  }, [selectedTopic]);
-
   // Reset topic and lesson when grade changes from context
-  useEffect(() => {
-    setSelectedTopic('');
-    setSelectedLesson('');
-  }, [selectedGrade]);
 
   // Debounced search effect
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 500); // 500ms delay
 
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  const fetchTopics = async () => {
+  const fetchTopics = useCallback(async () => {
     try {
       const response = await api.get('/topics');
       setTopics(response.data.data || []);
     } catch (err) {
       console.error('Error fetching topics:', err);
     }
-  };
+  }, []);
 
-  const fetchLessons = async (topicId) => {
+  const fetchLessons = useCallback(async (topicId) => {
     try {
       const response = await api.get(`/lessons?topicId=${topicId}`);
       setLessons(response.data.data || []);
     } catch (err) {
       console.error('Error fetching lessons:', err);
     }
-  };
+  }, []);
 
-  const fetchExercises = async () => {
+  const fetchExercises = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -94,23 +65,23 @@ const AdminQuestionBank = () => {
         ...(selectedDifficulty && { difficulty: selectedDifficulty }),
         ...(debouncedSearchTerm && { search: debouncedSearchTerm })
       };
-      
+
       const response = await api.get('/exercises', { params });
       const exercisesData = response.data.data || [];
-      
+
       setExercises(exercisesData);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching exercises:', err);
       setLoading(false);
     }
-  };
+  }, [debouncedSearchTerm, selectedDifficulty, selectedLesson, selectedTopic]);
 
   const handleCreateExercise = async (e) => {
     e.preventDefault();
     try {
       const submitData = { ...formData };
-      
+
       if (submitData.type === 'multiple-choice') {
         submitData.options = submitData.options.filter(opt => opt.trim() !== '');
         if (submitData.options.length < 2) {
@@ -157,7 +128,7 @@ const AdminQuestionBank = () => {
   };
 
   const handleSelectExercise = (exerciseId) => {
-    setSelectedExercises(prev => 
+    setSelectedExercises(prev =>
       prev.includes(exerciseId)
         ? prev.filter(id => id !== exerciseId)
         : [...prev, exerciseId]
@@ -236,7 +207,7 @@ const AdminQuestionBank = () => {
         params: { lessonId: formData.lessonId, includeAnswers: 'true' }
       });
       const existingExercises = existingExercisesResponse.data.data || [];
-      
+
       // Create a set of existing question texts (normalized) for quick lookup
       const existingQuestionTexts = new Set(
         existingExercises.map(ex => ex.question.trim().toLowerCase())
@@ -244,11 +215,11 @@ const AdminQuestionBank = () => {
 
       const createdIds = [];
       const skippedDuplicates = [];
-      
+
       for (const question of previewQuestions) {
         // Check if question already exists (case-insensitive comparison)
         const normalizedQuestion = question.question.trim().toLowerCase();
-        
+
         if (existingQuestionTexts.has(normalizedQuestion)) {
           skippedDuplicates.push(question.question.substring(0, 50) + '...');
           continue; // Skip duplicate
@@ -276,7 +247,7 @@ const AdminQuestionBank = () => {
       setShowPreviewModal(false);
       setPreviewQuestions([]);
       setImportUrl('');
-      
+
       let message = `Đã thêm ${createdIds.length} câu hỏi vào ngân hàng!`;
       if (skippedDuplicates.length > 0) {
         message += `\nĐã bỏ qua ${skippedDuplicates.length} câu hỏi trùng lặp.`;
@@ -309,6 +280,36 @@ const AdminQuestionBank = () => {
     };
     return types[type] || type;
   };
+
+  useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics]);
+
+  useEffect(() => {
+    fetchExercises();
+  }, [selectedTopic, selectedLesson, selectedDifficulty, debouncedSearchTerm, fetchExercises]);
+
+  useEffect(() => {
+    if (selectedTopic) {
+      fetchLessons(selectedTopic);
+    } else {
+      setLessons([]);
+      setSelectedLesson('');
+    }
+  }, [fetchLessons, selectedTopic]);
+
+  useEffect(() => {
+    setSelectedTopic('');
+    setSelectedLesson('');
+  }, [selectedGrade]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   if (loading && exercises.length === 0) {
     return (
@@ -479,9 +480,9 @@ const AdminQuestionBank = () => {
                       />
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-md">
-                      <div 
-                        className="truncate" 
-                        dangerouslySetInnerHTML={{ __html: exercise.question.substring(0, 100) + (exercise.question.length > 100 ? '...' : '') }} 
+                      <div
+                        className="truncate"
+                        dangerouslySetInnerHTML={{ __html: exercise.question.substring(0, 100) + (exercise.question.length > 100 ? '...' : '') }}
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">

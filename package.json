@@ -8,9 +8,19 @@
     "backend"
   ],
   "scripts": {
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && npm run dev",
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "npm run dev --workspace backend",
+    "install:all": "npm install",
+    "build": "npm run build --workspace frontend",
+    "lint": "eslint backend frontend --ext .js,.jsx --report-unused-disable-directives --max-warnings 0",
+    "test": "node --test backend/tests/*.test.js frontend/tests/*.test.js",
+    "check": "npm run lint && npm test && npm run build"
+  },
+  "engines": {
+    "node": ">=22.12.0",
+    "npm": ">=10"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1"
   }
 }
-

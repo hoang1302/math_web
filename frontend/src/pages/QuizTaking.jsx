@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api, { getBaseUrl } from '../utils/api';
 import MathRenderer from '../components/MathRenderer';
@@ -13,85 +13,68 @@ const QuizTaking = () => {
   const [startTime, setStartTime] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
+  const submittingRef = useRef(false);
+  const autoSubmitted = useRef(false);
 
-  useEffect(() => {
-    startQuiz();
-    // Request fullscreen
-    requestFullscreen();
-  }, [id]);
-
-  const handleSubmit = async () => {
-    if (submitting) return;
-
+  const handleSubmit = useCallback(async () => {
+    if (submittingRef.current || !startTime) return;
+    submittingRef.current = true;
+    setSubmitting(true);
     try {
-      setSubmitting(true);
-      const timeSpent = Math.floor((Date.now() - startTime) / 1000);
-
-      const answersArray = Object.entries(answers).map(([exerciseId, userAnswer]) => ({
-        exerciseId,
-        userAnswer,
-      }));
-
-      const response = await api.post(`/quizzes/${id}/submit`, {
-        answers: answersArray,
-        timeSpent,
+      const response = await api.post('/quizzes/' + id + '/submit', {
+        answers: Object.entries(answers).map(([exerciseId, userAnswer]) => ({ exerciseId, userAnswer })),
+        timeSpent: Math.floor((Date.now() - startTime) / 1000),
       });
-
-      exitFullscreen();
-      navigate(`/quiz/${id}/results`, { state: { result: response.data.data } });
-    } catch (err) {
-      console.error('Error submitting quiz:', err);
-      alert('Có lỗi xảy ra khi nộp bài');
+      if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+      navigate('/quiz/' + id + '/results', { state: { result: response.data.data } });
+    } catch (error) {
+      console.error('Error submitting quiz:', error);
+      alert('Có lỗi xảy ra khi nộp bài. Vui lòng thử lại.');
+      submittingRef.current = false;
       setSubmitting(false);
     }
-  };
+  }, [answers, id, navigate, startTime]);
 
   useEffect(() => {
-    if (timeLeft > 0 && startTime) {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            handleSubmit();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeLeft, startTime]);
+    const controller = new AbortController();
+    setLoading(true);
+    setQuiz(null);
+    setAnswers({});
+    setCurrentQuestionIndex(0);
+    setStartTime(null);
+    setSubmitting(false);
+    submittingRef.current = false;
+    autoSubmitted.current = false;
+    const startQuiz = async () => {
+      try {
+        const response = await api.post('/quizzes/' + id + '/start', {}, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        setQuiz(response.data.data);
+        setTimeLeft(response.data.data.timeLimit * 60);
+        setStartTime(Date.now());
+      } catch (error) {
+        if (!controller.signal.aborted) console.error('Error starting quiz:', error);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    };
+    startQuiz();
+    return () => controller.abort();
+  }, [id]);
 
-  const requestFullscreen = () => {
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().catch(() => {
-        console.log('Fullscreen not supported or denied');
-      });
-      setFullscreen(true);
-    }
-  };
+  useEffect(() => {
+    if (!startTime || !quiz) return;
+    const deadline = startTime + quiz.timeLimit * 60000;
+    const timer = setInterval(() => setTimeLeft(Math.max(0, Math.ceil((deadline - Date.now()) / 1000))), 1000);
+    return () => clearInterval(timer);
+  }, [startTime, quiz]);
 
-  const exitFullscreen = () => {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-      setFullscreen(false);
+  useEffect(() => {
+    if (startTime && timeLeft === 0 && !autoSubmitted.current) {
+      autoSubmitted.current = true;
+      handleSubmit();
     }
-  };
-
-  const startQuiz = async () => {
-    try {
-      setLoading(true);
-      const response = await api.post(`/quizzes/${id}/start`);
-      setQuiz(response.data.data);
-      setTimeLeft(response.data.data.timeLimit * 60); // Convert to seconds
-      setStartTime(Date.now());
-      setLoading(false);
-    } catch (err) {
-      console.error('Error starting quiz:', err);
-      setLoading(false);
-    }
-  };
+  }, [startTime, timeLeft, handleSubmit]);
 
   const handleAnswerChange = (questionId, answer) => {
     setAnswers({ ...answers, [questionId]: answer });
@@ -203,10 +186,8 @@ const QuizTaking = () => {
                   alt="Hình ảnh câu hỏi"
                   className="max-w-full h-auto max-h-96 rounded-lg border shadow-sm mx-auto"
                   onError={(e) => {
-                    console.log('Image load error:', currentQuestion.questionImage);
                     e.target.style.display = 'none';
                   }}
-                  onLoad={() => console.log('Image loaded successfully:', currentQuestion.questionImage)}
                 />
               </div>
             )}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import MathRenderer from '../components/MathRenderer';
@@ -12,7 +12,7 @@ const LessonDetail = () => {
   const [allLessons, setAllLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   // Practice state
   const [practiceStarted, setPracticeStarted] = useState(false);
   const [userAnswers, setUserAnswers] = useState({});
@@ -21,60 +21,29 @@ const LessonDetail = () => {
   const [practiceCompleted, setPracticeCompleted] = useState(false);
   const [progressUpdated, setProgressUpdated] = useState(false);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('LessonDetail mounted with id:', id);
-    return () => {
-      console.log('LessonDetail unmounting');
-    };
-  }, [id]);
+  const progressInFlight = useRef(false);
 
-  useEffect(() => {
-    if (id) {
-      // Reset practice state when switching to a new lesson
-      setPracticeStarted(false);
-      setUserAnswers({});
-      setPracticeResults({});
-      setCheckingAnswers({});
-      setPracticeCompleted(false);
-      setProgressUpdated(false);
-      
-      fetchLesson();
-      fetchExercises();
-    } else {
-      setError('ID bài học không hợp lệ');
-      setLoading(false);
-    }
-  }, [id]);
-
-  const fetchLesson = async () => {
+  const fetchLesson = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
-      console.log('Fetching lesson with id:', id);
-      
       const response = await api.get(`/lessons/${id}`);
-      console.log('Lesson response:', response.data);
-      
       if (!response || !response.data) {
         throw new Error('No response from server');
       }
-      
+
       // Handle both response.data.data and response.data formats
       const lessonData = response.data.data || response.data;
-      
+
       if (!lessonData) {
         throw new Error('Invalid response format from server');
       }
-      
+
       setLesson(lessonData);
-      console.log('Lesson set:', lessonData);
-      
       // Fetch all lessons in the same topic
       if (lessonData.topicId) {
         try {
           const topicId = lessonData.topicId._id || lessonData.topicId;
-          console.log('Fetching lessons for topic:', topicId);
           const lessonsResponse = await api.get(`/lessons?topicId=${topicId}`);
           const lessonsData = lessonsResponse.data.data || lessonsResponse.data || [];
           setAllLessons(Array.isArray(lessonsData) ? lessonsData : []);
@@ -85,23 +54,23 @@ const LessonDetail = () => {
       } else {
         setAllLessons([]);
       }
-      
+
       setLoading(false);
     } catch (err) {
       console.error('Error fetching lesson:', err);
       console.error('Error response:', err.response);
       console.error('Error details:', err.response?.data || err.message);
-      
-      const errorMessage = err.response?.data?.message 
-        || err.message 
+
+      const errorMessage = err.response?.data?.message
+        || err.message
         || 'Không thể tải bài học. Vui lòng thử lại sau.';
-      
+
       setError(errorMessage);
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchExercises = async () => {
+  const fetchExercises = useCallback(async () => {
     try {
       // Fetch all exercises for this lesson
       const response = await api.get(`/exercises?lessonId=${id}`);
@@ -109,13 +78,13 @@ const LessonDetail = () => {
     } catch (err) {
       console.error('Error fetching exercises:', err);
     }
-  };
-  
+  }, [id]);
+
   // Practice handlers
   const handleAnswerChange = (exerciseId, answer) => {
     // Update user answer (for multiple choice, this will trigger check)
-    setUserAnswers({ ...userAnswers, [exerciseId]: answer });
-    
+    setUserAnswers(previous => ({ ...previous, [exerciseId]: answer }));
+
     // For multiple choice, auto-check immediately
     if (answer !== undefined && answer !== '') {
       checkAnswer(exerciseId, answer);
@@ -124,38 +93,25 @@ const LessonDetail = () => {
 
   const checkAnswer = async (exerciseId, answer = null) => {
     const answerToCheck = answer !== null ? answer : userAnswers[exerciseId];
-    
+
     if (answerToCheck === undefined || answerToCheck === '') {
       return;
     }
 
-    setCheckingAnswers({ ...checkingAnswers, [exerciseId]: true });
-    
+    setCheckingAnswers(previous => ({ ...previous, [exerciseId]: true }));
+
     try {
       const response = await api.post('/exercises/check', {
         exerciseId,
         userAnswer: answerToCheck,
       });
 
-      setPracticeResults({ ...practiceResults, [exerciseId]: response.data });
-      
-      // Check if all questions are answered
-      const newAnswers = { ...userAnswers, [exerciseId]: answerToCheck };
-      const allAnswered = exercises.every(ex => 
-        newAnswers[ex._id] !== undefined && newAnswers[ex._id] !== ''
-      );
-      
-      if (allAnswered) {
-        setPracticeCompleted(true);
-        setTimeout(() => {
-          document.querySelector('[data-section="completion"]')?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      }
+      setPracticeResults(previous => ({ ...previous, [exerciseId]: response.data }));
     } catch (err) {
       console.error('Error checking answer:', err);
       alert('Có lỗi xảy ra khi kiểm tra đáp án');
     } finally {
-      setCheckingAnswers({ ...checkingAnswers, [exerciseId]: false });
+      setCheckingAnswers(previous => ({ ...previous, [exerciseId]: false }));
     }
   };
 
@@ -164,45 +120,63 @@ const LessonDetail = () => {
     setUserAnswers({});
     setPracticeResults({});
     setPracticeCompleted(false);
-    setProgressUpdated(false); // Reset progress update flag
+    setProgressUpdated(false);
+    progressInFlight.current = false;
     // Scroll to practice section
     setTimeout(() => {
       document.querySelector('[data-section="practice"]')?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
   };
 
+  useEffect(() => {
+    const completed = exercises.length > 0 && exercises.every(exercise => practiceResults[exercise._id] && !checkingAnswers[exercise._id]);
+    setPracticeCompleted(completed);
+  }, [exercises, practiceResults, checkingAnswers]);
+
   const currentIndex = allLessons.findIndex(l => l._id === id);
-  const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
+
   const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
 
-  const allQuestionsAnswered = exercises.length > 0 && exercises.every(ex => 
+  const allQuestionsAnswered = exercises.length > 0 && exercises.every(ex =>
     userAnswers[ex._id] !== undefined && userAnswers[ex._id] !== ''
   );
   const correctCount = Object.values(practiceResults).filter(r => r?.isCorrect).length;
   const score = exercises.length > 0 ? Math.round((correctCount / exercises.length) * 100) : 0;
 
-  // Update progress when practice is completed (only once)
-  // MUST be before any early returns to follow Rules of Hooks
+  useEffect(() => {
+    if (id) {
+      // Reset practice state when switching to a new lesson
+      setPracticeStarted(false);
+      setUserAnswers({});
+      setPracticeResults({});
+      setCheckingAnswers({});
+      setPracticeCompleted(false);
+      setProgressUpdated(false);
+      progressInFlight.current = false;
+
+      fetchLesson();
+      fetchExercises();
+    } else {
+      setError('ID bài học không hợp lệ');
+      setLoading(false);
+    }
+  }, [fetchExercises, fetchLesson, id]);
+
   useEffect(() => {
     const updateProgress = async () => {
       // Only update if all conditions are met and haven't updated yet
-      if (practiceCompleted && allQuestionsAnswered && exercises.length > 0 && id && !progressUpdated) {
+      if (practiceCompleted && allQuestionsAnswered && exercises.length > 0 && id && !progressUpdated && !progressInFlight.current) {
+        progressInFlight.current = true;
         try {
-          console.log('Updating progress for lesson:', id, 'Score:', score);
-          const response = await api.post(`/progress/lessons/${id}`, {
+          await api.post(`/progress/lessons/${id}`, {
             completed: true,
             completionPercentage: 100,
             score: score,
             timeSpent: 0 // Có thể tính toán thời gian thực tế nếu cần
           });
-          console.log('Progress updated successfully:', response.data);
           setProgressUpdated(true); // Mark as updated to prevent duplicate calls
-          
-          // Show success message
-          if (response.data.newlyEarnedBadges && response.data.newlyEarnedBadges.length > 0) {
-            console.log('New badges earned:', response.data.newlyEarnedBadges);
-          }
         } catch (err) {
+          progressInFlight.current = false;
           console.error('Error updating progress:', err);
           console.error('Error details:', err.response?.data || err.message);
         }
@@ -215,7 +189,6 @@ const LessonDetail = () => {
     }
   }, [practiceCompleted, allQuestionsAnswered, id, score, exercises.length, progressUpdated, correctCount]);
 
-  // Early returns AFTER all hooks
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -235,15 +208,15 @@ const LessonDetail = () => {
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Không tìm thấy bài học</h2>
           <p className="text-red-600 mb-6">{error || 'Bài học không tồn tại hoặc đã bị xóa'}</p>
           <div className="space-y-3">
-            <Link 
-              to="/lessons" 
+            <Link
+              to="/lessons"
               className="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               Quay lại danh sách bài học
             </Link>
             <br />
-            <Link 
-              to="/" 
+            <Link
+              to="/"
               className="inline-block px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
             >
               Về trang chủ
@@ -325,8 +298,8 @@ const LessonDetail = () => {
         <div className="flex-1 flex flex-col overflow-hidden bg-white" data-section="theory">
           {lesson.slides && lesson.slides.length > 0 ? (
             <div className="flex-1 flex flex-col overflow-hidden p-2 md:p-4">
-              <SlideViewer 
-                slides={lesson.slides} 
+              <SlideViewer
+                slides={lesson.slides}
                 onStartPractice={startPractice}
               />
             </div>
@@ -357,12 +330,12 @@ const LessonDetail = () => {
               const result = practiceResults[exercise._id];
               const isChecking = checkingAnswers[exercise._id];
               const hasAnswer = userAnswers[exercise._id] !== undefined && userAnswers[exercise._id] !== '';
-              
+
               return (
-                <div 
+                <div
                   key={exercise._id}
                   className={`border-4 rounded-2xl p-6 shadow-lg ${
-                    result 
+                    result
                       ? (result.isCorrect ? 'border-green-400 bg-gradient-to-br from-green-50 to-green-100' : 'border-red-400 bg-gradient-to-br from-red-50 to-red-100')
                       : 'border-primary-300 bg-gradient-to-br from-primary-50 to-blue-50'
                   }`}
@@ -372,7 +345,7 @@ const LessonDetail = () => {
                       Câu {index + 1}
                     </span>
                   </div>
-                  
+
                   <div className="text-lg mb-4">
                     <MathRenderer content={exercise.question} />
                   </div>
@@ -439,8 +412,8 @@ const LessonDetail = () => {
                   {/* Result - Hiển thị ngay sau khi chọn đáp án */}
                   {result && (
                     <div className={`mt-4 p-6 rounded-2xl border-4 shadow-xl ${
-                      result.isCorrect 
-                        ? 'bg-gradient-to-br from-green-100 to-green-200 border-green-400' 
+                      result.isCorrect
+                        ? 'bg-gradient-to-br from-green-100 to-green-200 border-green-400'
                         : 'bg-gradient-to-br from-red-100 to-red-200 border-red-400'
                     }`}>
                       <div className="flex items-center space-x-3 mb-4">
@@ -451,7 +424,7 @@ const LessonDetail = () => {
                           {result.isCorrect ? 'Đúng rồi!' : 'Sai rồi!'}
                         </span>
                       </div>
-                      
+
                       {!result.isCorrect && (
                         <div className="mb-4">
                           <p className="text-gray-700 mb-2 font-medium">
@@ -462,7 +435,7 @@ const LessonDetail = () => {
                           </div>
                         </div>
                       )}
-                      
+
                       {result.explanation && (
                         <div className="mb-4">
                           <p className="text-gray-700 mb-2 font-medium">
@@ -473,7 +446,7 @@ const LessonDetail = () => {
                           </div>
                         </div>
                       )}
-                      
+
                       {!result.isCorrect && (
                         <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                           <p className="text-yellow-800 font-medium mb-2">
@@ -508,9 +481,9 @@ const LessonDetail = () => {
             <div className="text-7xl mb-4 animate-bounce">🎉</div>
             <h2 className="text-4xl md:text-5xl font-heading font-bold text-green-800 mb-3 drop-shadow-lg">Hoàn thành bài tập!</h2>
             <p className="text-xl md:text-2xl font-semibold text-green-700 mb-6">
-              Bạn đã hoàn thành tất cả {exercises.length} câu hỏi của bài học "{lesson.title}"
+              Bạn đã hoàn thành tất cả {exercises.length} câu hỏi của bài học &quot;{lesson.title}&quot;
             </p>
-            
+
             <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 mb-6 max-w-md mx-auto border-4 border-action-300 shadow-xl">
               <h3 className="text-2xl font-heading font-bold mb-4 text-primary-600">Kết quả:</h3>
               <div className="space-y-4">
@@ -528,7 +501,7 @@ const LessonDetail = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
               {nextLesson && (
                 <Link
@@ -541,8 +514,8 @@ const LessonDetail = () => {
               <Link
                 to="/"
                 className={`px-10 py-5 rounded-2xl font-heading font-bold text-xl transition-all shadow-xl hover:shadow-2xl transform hover:scale-105 w-full sm:w-auto text-center ${
-                  nextLesson 
-                    ? 'bg-gradient-to-r from-action-400 to-action-500 text-white hover:from-action-500 hover:to-action-600' 
+                  nextLesson
+                    ? 'bg-gradient-to-r from-action-400 to-action-500 text-white hover:from-action-500 hover:to-action-600'
                     : 'bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:from-primary-600 hover:to-primary-700'
                 }`}
               >
